@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Maintenance Management System</title>
+  <title>Loading...</title>
   <style>
     * {
       margin: 0;
@@ -547,7 +547,17 @@
     </main>
   </div>
 
-  <script>
+  <script type="module">
+    import { CsvStore } from './csv-store.js';
+    import { ConfigLoader } from './config-loader.js';
+
+    // ── INIT ON PAGE LOAD ────────────────────────────────────────
+    (async function initPage() {
+      await CsvStore.init();
+      const config = await ConfigLoader.load();
+      document.title = config.appTitle;
+    })();
+
     // ── LIVE CLOCK ────────────────────────────────────────────────
     function updateClock() {
       const now = new Date();

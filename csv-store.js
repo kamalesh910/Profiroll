@@ -607,15 +607,8 @@ async function _ensureIdentity() {
 
 /**
  * Show a notification toast to the user.
- * Stub — full implementation in Task 15.
- *
- * @param {string} msg   Human-readable message.
- * @param {string} type  Severity: 'error' | 'warning' | 'info'
- */
-function _showToast(msg, type) {
-  // Stub — full implementation in Task 15
-  console.warn('[Toast]', type, msg);
-}
+// Stub — full implementation in Task 15
+// (moved to full implementation below)
 
 /**
  * Inject (or update) a read-only indicator in the navbar while a lock is held
@@ -1177,15 +1170,93 @@ async function _checkAndShowMigrationDialog() {
 }
 
 /**
- * Task 13.1 stub — full implementation in Task 13.2.
+ * Task 13.2 — Execute migration from localStorage to CSV files.
  *
- * Parses each localStorage JSON array and writes the records to the appropriate
- * monthly CSV files via `_flush`.
+ * Steps:
+ *  1. Parse each localStorage JSON array (mms_machines, mms_breakdowns, mms_spares).
+ *  2. Route each record to its `createdAt`-derived month (or current month as fallback).
+ *  3. Write CSV files via `_flush`.
+ *  4. On successful migration of each entity: delete that localStorage key.
+ *  5. On failure for any entity: retain its localStorage data; display per-entity error.
+ *
+ * Requirements: 8.2, 8.3, 8.4, 8.5
  *
  * @returns {Promise<void>}
  */
 async function _executeMigration() {
-  // Task 13.2 will implement this
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  
+  const entities = ['machines', 'breakdowns', 'spareparts'];
+  const storageKeys = { machines: 'mms_machines', breakdowns: 'mms_breakdowns', spareparts: 'mms_spares' };
+  
+  for (const entity of entities) {
+    const storageKey = storageKeys[entity];
+    const rawData = localStorage.getItem(storageKey);
+    
+    if (!rawData) continue; // Skip if this entity doesn't exist in localStorage
+    
+    try {
+      const records = JSON.parse(rawData);
+      if (!Array.isArray(records)) continue;
+      
+      // Group records by creation month
+      const monthMap = new Map(); // month → [records]
+      
+      for (const record of records) {
+        let month = currentMonth;
+        
+        // Try to extract month from createdAt field
+        if (record.createdAt) {
+          try {
+            const date = new Date(record.createdAt);
+            if (!isNaN(date.getTime())) {
+              month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            }
+          } catch (_e) {
+            // fallback to current month
+          }
+        }
+        
+        if (!monthMap.has(month)) monthMap.set(month, []);
+        monthMap.get(month).push(record);
+      }
+      
+      // Write each month's records via _flush (which will acquire locks)
+      for (const [month, monthRecords] of monthMap) {
+        await _acquireLock(entity, month);
+        try {
+          await _flush(entity, month, monthRecords);
+          // Track creation month for each record
+          for (const record of monthRecords) {
+            const id = _getRecordId(entity, record);
+            _creationMonthMap.set(id, month);
+          }
+          // Update cache
+          const existing = _cache.get(entity) || [];
+          const merged = [...existing];
+          for (const newRecord of monthRecords) {
+            const idx = merged.findIndex(r => _getRecordId(entity, r) === _getRecordId(entity, newRecord));
+            if (idx >= 0) {
+              merged[idx] = newRecord;
+            } else {
+              merged.push(newRecord);
+            }
+          }
+          _cache.set(entity, merged);
+        } finally {
+          _releaseLock(entity, month);
+        }
+      }
+      
+      // Successful migration for this entity — delete the localStorage key
+      localStorage.removeItem(storageKey);
+      _showToast(`Migration complete for ${entity}`, 'info');
+    } catch (err) {
+      // On failure — retain localStorage data and show error
+      _showToast(`Migration failed for ${entity}: ${err.message}`, 'error');
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1234,15 +1305,23 @@ export const CsvStore = {
    * Sequence:
    *  1. Load configuration (stores result into module-level _config).
    *  2. Select I/O mode (FSAPI vs localStorage fallback).
-   *  3. Ensure user identity is resolved (modal if not already in sessionStorage).
+   *  3. Check and offer migration from localStorage to CSV (if applicable).
+   *  4. Ensure user identity is resolved (modal if not already in sessionStorage).
    *
-   * Requirements: 1.1, 5.1, 7.1
+   * Requirements: 1.1, 5.1, 7.1, 8.1, 8.2
    *
    * @returns {Promise<void>}
    */
   async init() {
     _config = await ConfigLoader.load();
     await _initMode();
+    
+    // Check if migration is needed and offer the dialog (Task 13.1)
+    const migrationChoice = await _checkAndShowMigrationDialog();
+    if (migrationChoice === 'migrate') {
+      await _executeMigration(); // Task 13.2
+    }
+    
     await _ensureIdentity();
   },
 

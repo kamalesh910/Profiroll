@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Machines — Maintenance Management System</title>
+  <title>Loading...</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -379,45 +379,29 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    // Import CsvStore and ConfigLoader for persistent storage
+    import { CsvStore } from './csv-store.js';
+    import { ConfigLoader } from './config-loader.js';
+
+    // ── INIT ON PAGE LOAD ────────────────────────────────────────
+    (async function initPage() {
+      // Initialize CsvStore (config, mode selection, identity, migration)
+      await CsvStore.init();
+      
+      // Load the app title from config and set it on the page
+      const config = await ConfigLoader.load();
+      document.title = config.appTitle;
+      document.querySelector('.navbar .logo').textContent = config.appTitle;
+      
+      // Load machines from CsvStore
+      machines = await CsvStore.load('machines');
+      renderStats();
+      renderTable();
+    })();
+
     // ── DATA STORE ──────────────────────────────────────────────
-    const STORAGE_KEY = 'mms_machines';
-
-    function loadMachines() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : getDefaultMachines();
-    }
-
-    function saveMachines(machines) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(machines));
-    }
-
-    function getDefaultMachines() {
-      return [
-        {
-          id: 'BE760', name: 'Belt Conveyor BE760', type: 'Belt Conveyor',
-          location: 'Production Line 1', status: 'Running',
-          date: '2022-03-15', brand: '', serial: '', notes: ''
-        },
-        {
-          id: 'BE551', name: 'Belt Conveyor BE551', type: 'Belt Conveyor',
-          location: 'Production Line 2', status: 'Running',
-          date: '2021-07-10', brand: '', serial: '', notes: ''
-        },
-        {
-          id: 'BE550', name: 'Belt Conveyor BE550', type: 'Belt Conveyor',
-          location: 'Production Line 2', status: 'Running',
-          date: '2021-07-08', brand: '', serial: '', notes: ''
-        },
-        {
-          id: 'BE547', name: 'Belt Conveyor BE547', type: 'Belt Conveyor',
-          location: 'Production Line 3', status: 'Running',
-          date: '2020-11-20', brand: '', serial: '', notes: ''
-        }
-      ];
-    }
-
-    let machines = loadMachines();
+    let machines = [];
     let editIndex = null;
     let detailIndex = null;
 
@@ -532,7 +516,7 @@
       document.getElementById('machineModal').classList.remove('show');
     }
 
-    function saveMachine() {
+    async function saveMachine() {
       const id = document.getElementById('f-id').value.trim();
       const name = document.getElementById('f-name').value.trim();
       if (!id || !name) { alert('Machine ID and Name are required.'); return; }
@@ -555,22 +539,42 @@
           alert('Machine ID "' + id + '" already exists. Use a unique ID.');
           return;
         }
-        machines.push(entry);
+        // Use CsvStore.append for new records
+        try {
+          await CsvStore.append('machines', entry);
+          machines = await CsvStore.load('machines');
+        } catch (err) {
+          alert('Failed to add machine: ' + err.message);
+          return;
+        }
       } else {
-        machines[editIndex] = entry;
+        // Use CsvStore.update for existing records
+        const oldId = machines[editIndex].id;
+        try {
+          await CsvStore.update('machines', oldId, entry);
+          machines = await CsvStore.load('machines');
+        } catch (err) {
+          alert('Failed to update machine: ' + err.message);
+          return;
+        }
       }
 
-      saveMachines(machines);
       closeModal();
       renderStats();
       renderTable();
     }
 
     // ── DELETE ────────────────────────────────────────────────────
-    function deleteMachine(index) {
+    async function deleteMachine(index) {
       if (!confirm('Delete machine "' + machines[index].id + '"? This cannot be undone.')) return;
-      machines.splice(index, 1);
-      saveMachines(machines);
+      const machineId = machines[index].id;
+      try {
+        await CsvStore.remove('machines', machineId);
+        machines = await CsvStore.load('machines');
+      } catch (err) {
+        alert('Failed to delete machine: ' + err.message);
+        return;
+      }
       renderStats();
       renderTable();
     }
@@ -628,10 +632,6 @@
     }
     updateClock();
     setInterval(updateClock, 1000);
-
-    // ── INIT ──────────────────────────────────────────────────────
-    renderStats();
-    renderTable();
   </script>
 
 </body>

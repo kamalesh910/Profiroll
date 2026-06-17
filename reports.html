@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Monthly Reports — Maintenance Management System</title>
+  <title>Loading...</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -298,11 +298,12 @@
   </main>
 </div>
 
-<script>
-// ── CONSTANTS ────────────────────────────────────────────────────
-const BD_KEY  = 'mms_breakdowns';
-const MAC_KEY = 'mms_machines';
+<script type="module">
+// Import CsvStore and ConfigLoader
+import { CsvStore } from './csv-store.js';
+import { ConfigLoader } from './config-loader.js';
 
+// ── CONSTANTS ────────────────────────────────────────────────────
 const FULL_MONTHS = ['January','February','March','April','May',
   'June','July','August','September','October','November','December'];
 
@@ -324,13 +325,28 @@ Chart.defaults.borderColor = '#1e293b';
 let charts = {};
 
 // ── LOAD DATA ─────────────────────────────────────────────────────
-function loadBD()       { return JSON.parse(localStorage.getItem(BD_KEY)  || '[]'); }
-function loadMachines() { return JSON.parse(localStorage.getItem(MAC_KEY) || '[]'); }
+async function loadBD()       { return await CsvStore.load('breakdowns'); }
+async function loadMachines() { return await CsvStore.load('machines'); }
+
+// ── INIT ON PAGE LOAD ────────────────────────────────────────
+(async function initPage() {
+  await CsvStore.init();
+  const config = await ConfigLoader.load();
+  document.title = config.appTitle;
+  
+  // Pre-populate operating hours from config
+  const opHoursInput = document.getElementById('f-ophours');
+  if (opHoursInput && config.defaultOperatingHours) {
+    opHoursInput.value = config.defaultOperatingHours;
+  }
+  
+  init();
+})();
 
 // ── INIT ──────────────────────────────────────────────────────────
-function init() {
-  const bds = loadBD();
-  const machines = loadMachines();
+async function init() {
+  const bds = await loadBD();
+  const machines = await loadMachines();
 
   // Populate year selector from data, fallback to current year
   const years = [...new Set(bds.map(b => b.bdDate ? b.bdDate.slice(0,4) : null).filter(Boolean))]
@@ -352,13 +368,13 @@ function init() {
 }
 
 // ── MAIN GENERATE ─────────────────────────────────────────────────
-function generate() {
+async function generate() {
   const year     = parseInt(document.getElementById('f-year').value);
   const month    = parseInt(document.getElementById('f-month').value);
   const machineF = document.getElementById('f-machine').value;
   const opHours  = parseFloat(document.getElementById('f-ophours').value) || 720;
 
-  const bds = loadBD();
+  const bds = await loadBD();
 
   // Filter to selected month
   let filtered = bds.filter(b => {

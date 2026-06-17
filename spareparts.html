@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Spare Parts — Maintenance Management System</title>
+  <title>Loading...</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -235,29 +235,40 @@
     </div>
   </div>
 </div>
-<script>
-const SP_KEY  = 'mms_spares';
-const MAC_KEY = 'mms_machines';
-function loadSpares()   { return JSON.parse(localStorage.getItem(SP_KEY)  || '[]'); }
-function saveSpares(d)  { localStorage.setItem(SP_KEY, JSON.stringify(d)); }
-function loadMachines() { return JSON.parse(localStorage.getItem(MAC_KEY) || '[]'); }
+<script type="module">
+  import { CsvStore } from './csv-store.js';
+  import { ConfigLoader } from './config-loader.js';
 
-let spares    = loadSpares();
-let machines  = loadMachines();
-let editIndex = null;
-let detailIdx = null;
+  // ── INIT ON PAGE LOAD ────────────────────────────────────────
+  (async function initPage() {
+    await CsvStore.init();
+    const config = await ConfigLoader.load();
+    document.title = config.appTitle;
+    
+    spares = await CsvStore.load('spareparts');
+    machines = await CsvStore.load('machines');
+    
+    populateMachineDropdowns();
+    renderStats();
+    renderTable();
+  })();
 
-function stockStatus(sp) {
-  if (sp.qtyInStock <= 0)                         return 'out';
-  if (sp.qtyInStock <= sp.minStockReq)            return 'low';
-  return 'ok';
-}
+  let spares    = [];
+  let machines  = [];
+  let editIndex = null;
+  let detailIdx = null;
 
-// ── MACHINE DROPDOWN ─────────────────────────────────────────────
-function populateMachineDropdowns() {
-  const opts = machines.map(m => `<option value="${m.id}">${m.id} — ${m.name}</option>`).join('');
-  document.getElementById('f-machine').innerHTML    = '<option value="">— Select —</option>' + opts;
-  document.getElementById('machineFilter').innerHTML= '<option value="">All Machines</option>' +
+  function stockStatus(sp) {
+    if (sp.qtyInStock <= 0)                         return 'out';
+    if (sp.qtyInStock <= sp.minStockReq)            return 'low';
+    return 'ok';
+  }
+
+  // ── MACHINE DROPDOWN ─────────────────────────────────────────────
+  function populateMachineDropdowns() {
+    const opts = machines.map(m => `<option value="${m.id}">${m.id} — ${m.name}</option>`).join('');
+    document.getElementById('f-machine').innerHTML    = '<option value="">— Select —</option>' + opts;
+    document.getElementById('machineFilter').innerHTML= '<option value="">All Machines</option>' +
     machines.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
 }
 
@@ -383,7 +394,7 @@ function openEditModal(idx) {
 function closeModal() { document.getElementById('spModal').classList.remove('show'); }
 
 // ── SAVE PART ────────────────────────────────────────────────────
-function savePart() {
+async function savePart() {
   const name = document.getElementById('f-name').value.trim();
   const qty  = parseInt(document.getElementById('f-qty').value) || 0;
   const min  = parseInt(document.getElementById('f-minqty').value) || 1;
@@ -408,17 +419,24 @@ function savePart() {
     createdAt:      editIndex === null ? new Date().toISOString() : spares[editIndex].createdAt,
   };
 
-  if (editIndex === null) spares.push(entry);
-  else spares[editIndex] = entry;
-
-  saveSpares(spares);
-  closeModal();
-  renderStats();
-  renderTable();
+  try {
+    if (editIndex === null) {
+      await CsvStore.append('spareparts', entry);
+    } else {
+      const oldId = spares[editIndex].id;
+      await CsvStore.update('spareparts', oldId, entry);
+    }
+    spares = await CsvStore.load('spareparts');
+    closeModal();
+    renderStats();
+    renderTable();
+  } catch (err) {
+    alert('Failed to save spare part: ' + err.message);
+  }
 }
 
 // ── ADJUST STOCK ─────────────────────────────────────────────────
-function adjustStock() {
+async function adjustStock() {
   if (editIndex === null) return;
   const type   = document.getElementById('adj-type').value;
   const qty    = parseInt(document.getElementById('adj-qty').value) || 0;
@@ -436,23 +454,36 @@ function adjustStock() {
   if (!s.movements) s.movements = [];
   s.movements.unshift({ type, qty, reason, date: new Date().toISOString().split('T')[0], ref: '' });
 
-  spares[editIndex] = s;
-  saveSpares(spares);
-  document.getElementById('f-qty').value = s.qtyInStock;
-  updateStockIndicator();
-  document.getElementById('adj-qty').value    = '1';
-  document.getElementById('adj-reason').value = '';
-  renderStats();
-  renderTable();
+  try {
+    await CsvStore.update('spareparts', s.id, { qtyInStock: s.qtyInStock, movements: s.movements });
+    spares = await CsvStore.load('spareparts');
+    const idx = spares.findIndex(sp => sp.id === s.id);
+    if (idx >= 0) {
+      editIndex = idx;
+      document.getElementById('f-qty').value = spares[idx].qtyInStock;
+      updateStockIndicator();
+    }
+    document.getElementById('adj-qty').value    = '1';
+    document.getElementById('adj-reason').value = '';
+    renderStats();
+    renderTable();
+  } catch (err) {
+    alert('Failed to adjust stock: ' + err.message);
+  }
 }
 
 // ── DELETE ───────────────────────────────────────────────────────
-function deletePart(idx) {
+async function deletePart(idx) {
   if (!confirm('Delete "' + spares[idx].spareName + '"?')) return;
-  spares.splice(idx, 1);
-  saveSpares(spares);
-  renderStats();
-  renderTable();
+  try {
+    const spareId = spares[idx].id;
+    await CsvStore.remove('spareparts', spareId);
+    spares = await CsvStore.load('spareparts');
+    renderStats();
+    renderTable();
+  } catch (err) {
+    alert('Failed to delete spare part: ' + err.message);
+  }
 }
 
 // ── DETAIL VIEW ──────────────────────────────────────────────────

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Breakdowns — Maintenance Management System</title>
+  <title>Loading...</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -795,19 +795,28 @@
 
 <div class="bd-toast" id="bd-toast"></div>
 
-<script>
+<script type="module">
+  // Import CsvStore and ConfigLoader for persistent storage
+  import { CsvStore } from './csv-store.js';
+  import { ConfigLoader } from './config-loader.js';
+
+  // ── INIT ON PAGE LOAD ────────────────────────────────────────
+  (async function initPage() {
+    await CsvStore.init();
+    const config = await ConfigLoader.load();
+    document.title = config.appTitle;
+    
+    breakdowns = await CsvStore.load('breakdowns');
+    machines   = await CsvStore.load('machines');
+    
+    populateMachineDropdowns();
+    renderStats();
+    renderTable();
+  })();
+
   // ── STORAGE ──────────────────────────────────────────────────
-  const BD_KEY  = 'mms_breakdowns';
-  const MAC_KEY = 'mms_machines';
-
-  function loadBD()       { return JSON.parse(localStorage.getItem(BD_KEY)  || '[]'); }
-  function loadMachines() { return JSON.parse(localStorage.getItem(MAC_KEY) || '[]'); }
-  function saveBD(data)   { localStorage.setItem(BD_KEY, JSON.stringify(data)); }
-  function loadSpares()   { return JSON.parse(localStorage.getItem('mms_spares') || '[]'); }
-  function saveSpares(d)  { localStorage.setItem('mms_spares', JSON.stringify(d)); }
-
-  let breakdowns  = loadBD();
-  let machines    = loadMachines();
+  let breakdowns  = [];
+  let machines    = [];
   let editIndex   = null;
   let detailIdx   = null;
   let selectedParts = []; // {spareId, spareName, specification, qtyUsed}
@@ -844,8 +853,16 @@
   function renderPartsPanel() {
     const search  = (document.getElementById('parts-search').value || '').toLowerCase();
     const machine = document.getElementById('parts-machine-filter').value;
-    const spares  = loadSpares();
+    
+    // Load spares synchronously from a cached copy for performance
+    let spares = [];
+    (async () => {
+      spares = await CsvStore.load('spareparts');
+      _renderPartsPanelContent(spares, search, machine);
+    })();
+  }
 
+  function _renderPartsPanelContent(spares, search, machine) {
     const filtered = spares.filter(s => {
       const matchSearch =
         (s.spareName||'').toLowerCase().includes(search) ||
@@ -1084,7 +1101,7 @@
   }
 
   // ── SAVE ──────────────────────────────────────────────────────
-  function saveBreakdown() {
+  async function saveBreakdown() {
     const machine    = document.getElementById('f-machine').value;
     const bdDate     = document.getElementById('f-bd-date').value;
     const startTime  = document.getElementById('f-start-time').value;
@@ -1098,7 +1115,7 @@
     if (!problem)    { alert('Please describe the problem.'); return; }
 
     // ── Validate spare parts stock ──────────────────────────────
-    const spares = loadSpares();
+    const spares = await CsvStore.load('spareparts');
     for (const p of selectedParts) {
       const s = spares.find(x => x.id === p.spareId);
       if (!s) continue;
@@ -1153,7 +1170,9 @@
         lowStockWarnings.push(`⚠️ "${s.spareName}" is now at LOW STOCK level (${s.qtyInStock} remaining)`);
       }
     });
-    saveSpares(spares);
+    
+    // Save updated spares via CsvStore
+    await CsvStore.save('spareparts', spares);
 
     // Build legacy parts string for backward compatibility
     const partsStr = selectedParts.map(p => `${p.spareName}${p.specification ? ' ('+p.specification+')' : ''} ×${p.qtyUsed}`).join(', ');
@@ -1182,29 +1201,44 @@
                     : breakdowns[editIndex].createdAt,
     };
 
-    if (editIndex === null) breakdowns.push(entry);
-    else breakdowns[editIndex] = entry;
+    try {
+      if (editIndex === null) {
+        // New breakdown - use append
+        await CsvStore.append('breakdowns', entry);
+      } else {
+        // Edit existing - use update
+        const oldRef = breakdowns[editIndex].ref;
+        await CsvStore.update('breakdowns', oldRef, entry);
+      }
+      
+      breakdowns = await CsvStore.load('breakdowns');
+      closeModal();
+      renderStats();
+      renderTable();
+      renderHistory();
 
-    saveBD(breakdowns);
-    closeModal();
-    renderStats();
-    renderTable();
-    renderHistory();
-
-    // Show low stock warnings as toasts
-    if (lowStockWarnings.length > 0) {
-      showBdToast(lowStockWarnings.join('<br>'), 'warn');
+      // Show low stock warnings as toasts
+      if (lowStockWarnings.length > 0) {
+        showBdToast(lowStockWarnings.join('<br>'), 'warn');
+      }
+    } catch (err) {
+      alert('Failed to save breakdown: ' + err.message);
     }
   }
 
   // ── DELETE ────────────────────────────────────────────────────
-  function deleteBreakdown(index) {
+  async function deleteBreakdown(index) {
     if (!confirm('Delete breakdown "' + breakdowns[index].ref + '"?')) return;
-    breakdowns.splice(index, 1);
-    saveBD(breakdowns);
-    renderStats();
-    renderTable();
-    renderHistory();
+    try {
+      const bdRef = breakdowns[index].ref;
+      await CsvStore.remove('breakdowns', bdRef);
+      breakdowns = await CsvStore.load('breakdowns');
+      renderStats();
+      renderTable();
+      renderHistory();
+    } catch (err) {
+      alert('Failed to delete breakdown: ' + err.message);
+    }
   }
 
   // ── DETAIL VIEW ───────────────────────────────────────────────
