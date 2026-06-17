@@ -50,9 +50,8 @@ export class FsapiAdapter {
   }
 
   /**
-   * Write content to a file at the given relative path using a write-then-rename strategy.
-   * Writes to "{filename}.tmp" first, then renames to "{filename}" for atomic replacement.
-   * Cleans up the .tmp file on rename failure before rethrowing.
+   * Write content to a file at the given relative path.
+   * Removes any existing file and writes fresh. Uses createWritable() which is atomic.
    *
    * @param {string} relPath — forward-slash separated relative path
    * @param {string} content — UTF-8 text content to write
@@ -68,30 +67,23 @@ export class FsapiAdapter {
       parentDir = await parentDir.getDirectoryHandle(segment, { create: true });
     }
 
-    // Ensure the target file handle exists (create if absent)
-    await parentDir.getFileHandle(filename, { create: true });
+    // Remove the old file if it exists (ignore errors)
+    try {
+      await parentDir.removeEntry(filename, { recursive: false });
+    } catch (_) {
+      // File doesn't exist or removal failed — proceed anyway
+    }
 
-    // Write to the .tmp swap file
-    const tmpHandle = await parentDir.getFileHandle(filename + '.tmp', { create: true });
-    const writable = await tmpHandle.createWritable();
+    // Create the file fresh and write atomically
+    const fileHandle = await parentDir.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
     try {
       await writable.write(content);
       await writable.close();
     } catch (writeErr) {
       // Attempt to close cleanly on write failure
       try { await writable.close(); } catch (_) { /* ignore */ }
-      // Try to remove the partial .tmp file
-      try { await parentDir.removeEntry(filename + '.tmp'); } catch (_) { /* ignore */ }
       throw writeErr;
-    }
-
-    // Rename .tmp → target filename (atomic replacement)
-    try {
-      await tmpHandle.move(filename);
-    } catch (renameErr) {
-      // Clean up orphaned .tmp file before rethrowing
-      try { await parentDir.removeEntry(filename + '.tmp'); } catch (_) { /* ignore */ }
-      throw renameErr;
     }
   }
 

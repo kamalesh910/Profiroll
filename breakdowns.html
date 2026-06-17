@@ -1618,13 +1618,13 @@
     el.scrollTop = el.scrollHeight;
   }
 
-  function generateTestData() {
+  async function generateTestData() {
     const startYear = parseInt(document.getElementById('td-start-year').value);
     const endYear   = parseInt(document.getElementById('td-end-year').value);
     if (startYear > endYear) { alert('Start year must be ≤ end year.'); return; }
 
     // Reload fresh machines list
-    machines = loadMachines();
+    machines = await CsvStore.load('machines');
     if (machines.length === 0) {
       alert('⚠️ No machines found. Please add machines first in the Machines page, then run the test generator.');
       return;
@@ -1829,6 +1829,36 @@
   renderStats();
   renderTable();
   renderHistory();
+
+  // Expose commonly used functions and APIs to global scope for inline handlers
+  window.CsvStore = CsvStore;
+  window.ConfigLoader = ConfigLoader;
+  window.populateMachineDropdowns = populateMachineDropdowns;
+  window.renderStats = renderStats;
+  window.renderTable = renderTable;
+  window.renderHistory = renderHistory;
+  window.openAddModal = openAddModal;
+  window.openEditModal = openEditModal;
+  window.closeModal = closeModal;
+  window.saveBreakdown = saveBreakdown;
+  window.deleteBreakdown = deleteBreakdown;
+  window.viewDetail = viewDetail;
+  window.closeDetail = closeDetail;
+  window.editFromDetail = editFromDetail;
+  window.generateTestData = generateTestData;
+  window.clearTestData = clearTestData;
+  window.togglePartsPanel = togglePartsPanel;
+  window.addPartToSelected = addPartToSelected;
+  window.removeSelectedPart = removeSelectedPart;
+  window.renderPartsPanel = renderPartsPanel;
+  window.renderSelectedParts = renderSelectedParts;
+  window.addHistoryRow = addHistoryRow;
+  window.removeHistoryRow = removeHistoryRow;
+  window.startEditTTR = startEditTTR;
+  window.saveTTR = saveTTR;
+  window.cancelEditTTR = cancelEditTTR;
+  window.toggleMachineBlock = toggleMachineBlock;
+  window.showTestPanel = showTestPanel;
 
   // Ensure copy-paste works in all textareas and text inputs
   document.querySelectorAll('textarea, input[type="text"]').forEach(function(el) {

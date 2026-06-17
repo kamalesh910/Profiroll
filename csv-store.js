@@ -14,6 +14,55 @@ let _adapter = null;    // current adapter instance (FsapiAdapter | LocalStorage
 let _fsHandle = null;   // FileSystemDirectoryHandle (FSAPI mode only)
 let _config  = null;    // loaded config object (set by CsvStore.init)
 
+// IndexedDB helpers to persist a FileSystemDirectoryHandle across reloads.
+// The FileSystemHandle types are structured-cloneable in browsers that
+// implement the File System Access API; storing/retrieving from IndexedDB
+// allows us to reuse the same handle on subsequent page loads and to
+// check/request permissions without forcing the user to re-pick the folder.
+const _HANDLE_DB = 'mms_handles_v1';
+const _HANDLE_STORE = 'handles';
+
+function _openHandleDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(_HANDLE_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(_HANDLE_STORE)) db.createObjectStore(_HANDLE_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function _saveFsHandle(handle) {
+  try {
+    const db = await _openHandleDB();
+    const tx = db.transaction(_HANDLE_STORE, 'readwrite');
+    tx.objectStore(_HANDLE_STORE).put(handle, 'root');
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    db.close();
+  } catch (err) {
+    // Non-fatal — ignore storage failures and continue without persistence.
+    console.warn('Failed to persist FS handle:', err);
+  }
+}
+
+async function _loadFsHandle() {
+  try {
+    const db = await _openHandleDB();
+    const tx = db.transaction(_HANDLE_STORE, 'readonly');
+    const req = tx.objectStore(_HANDLE_STORE).get('root');
+    const handle = await new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    return handle || null;
+  } catch (err) {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -411,9 +460,40 @@ async function _ensureFsapiAdapter() {
   if (_adapter instanceof FsapiAdapter) return;
 
   try {
-    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    _fsHandle = handle;
+    // Try to restore a previously persisted handle from IndexedDB.
+    let handle = await _loadFsHandle();
+
+    if (handle) {
+      // Check current permission state.
+      try {
+        const q = await handle.queryPermission({ mode: 'readwrite' });
+        if (q === 'granted') {
+          _fsHandle = handle;
+          _adapter = new FsapiAdapter(_fsHandle);
+          return;
+        }
+        // If permission is 'prompt', request it; user may grant.
+        if (q === 'prompt') {
+          const r = await handle.requestPermission({ mode: 'readwrite' });
+          if (r === 'granted') {
+            _fsHandle = handle;
+            _adapter = new FsapiAdapter(_fsHandle);
+            return;
+          }
+          // fall through to picker if request denied
+        }
+      } catch (permErr) {
+        // If any permission check throws, proceed to show picker.
+        console.warn('FS handle permission check failed, will request picker:', permErr);
+      }
+    }
+
+    // No stored handle or permission not granted — ask the user to pick a folder.
+    const picked = await window.showDirectoryPicker({ mode: 'readwrite' });
+    _fsHandle = picked;
     _adapter  = new FsapiAdapter(_fsHandle);
+    // Persist the chosen handle for subsequent reloads
+    await _saveFsHandle(_fsHandle);
   } catch (err) {
     // AbortError: user dismissed the picker (Requirement 5.3)
     // Any other unexpected error: also fall back gracefully

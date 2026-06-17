@@ -1,0 +1,6 @@
+{
+  "dataPath": "data",
+  "appTitle": "Maintenance Management System",
+  "defaultOperatingHours": 720,
+  "lockTimeoutSeconds": 10
+}

@@ -405,6 +405,15 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+// Expose all functions to window for inline onclick handlers
+if (typeof window !== 'undefined') {
+  window.openViewer = openViewer;
+  window.printDoc = printDoc;
+  window.clearDoc = clearDoc;
+  window.printCurrentViewer = printCurrentViewer;
+  window.closeViewer = closeViewer;
+}
 </script>
 </body>
 </html>

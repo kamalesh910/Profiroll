@@ -753,6 +753,12 @@ setInterval(updateClock, 1000);
 // ── INIT ──────────────────────────────────────────────────────────
 initFilters();
 recalculate();
+
+// Expose all functions to window for inline onclick handlers
+if (typeof window !== 'undefined') {
+  window.recalculate = recalculate;
+  window.initFilters = initFilters;
+}
 </script>
 
 </body>

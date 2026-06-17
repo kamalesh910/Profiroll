@@ -632,6 +632,21 @@
     }
     updateClock();
     setInterval(updateClock, 1000);
+
+    // Expose all functions to window for inline onclick handlers
+    if (typeof window !== 'undefined') {
+      window.openAddModal = openAddModal;
+      window.openEditModal = openEditModal;
+      window.closeModal = closeModal;
+      window.saveMachine = saveMachine;
+      window.deleteMachine = deleteMachine;
+      window.viewDetail = viewDetail;
+      window.closeDetail = closeDetail;
+      window.editFromDetail = editFromDetail;
+      window.renderTable = renderTable;
+      window.renderStats = renderStats;
+      window.populateMachineDropdowns = populateMachineDropdowns;
+    }
   </script>
 
 </body>

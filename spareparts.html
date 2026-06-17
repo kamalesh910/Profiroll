@@ -347,6 +347,18 @@ function renderTable() {
       </td></tr>`;
   }).join('');
 }
+
+// Expose module-scoped helpers and the CsvStore API to global scope so
+// existing inline `onclick` handlers (which run in the page/global scope)
+// can call them when the page is served over HTTP.
+window.CsvStore = CsvStore;
+window.ConfigLoader = ConfigLoader;
+window.populateMachineDropdowns = populateMachineDropdowns;
+window.renderStats = renderStats;
+window.renderTable = renderTable;
+window.updateStockIndicator = updateStockIndicator;
+window.stockStatus = stockStatus;
+window.viewDetail = viewDetail;
 </script>
 <script>
 // ── OPEN / CLOSE MODALS ──────────────────────────────────────────
@@ -601,6 +613,23 @@ updateClock(); setInterval(updateClock, 1000);
 populateMachineDropdowns();
 renderStats();
 renderTable();
+
+// Expose all plain-script functions to window for inline onclick handlers
+if (typeof window !== 'undefined') {
+  window.openAddModal = openAddModal;
+  window.openEditModal = openEditModal;
+  window.closeModal = closeModal;
+  window.savePart = savePart;
+  window.adjustStock = adjustStock;
+  window.deletePart = deletePart;
+  window.viewDetail = viewDetail;
+  window.closeDetail = closeDetail;
+  window.editFromDetail = editFromDetail;
+  window.importExcel = importExcel;
+  window.renderTable = renderTable;
+  window.renderStats = renderStats;
+  window.updateStockIndicator = updateStockIndicator;
+}
 </script>
 </body>
 </html>
