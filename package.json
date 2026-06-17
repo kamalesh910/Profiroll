@@ -1,0 +1,14 @@
+{
+  "name": "profiroll-mms",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest --run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "fast-check": "3.23.2",
+    "jsdom": "25.0.1",
+    "vitest": "2.1.9"
+  }
+}

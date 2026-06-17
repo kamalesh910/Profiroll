@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Breakdowns — Maintenance Management System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a; color: #e2e8f0; min-height: 100vh;
+    }
+
+    /* NAV */
+    .navbar {
+      background: #1e293b; border-bottom: 1px solid #334155;
+      padding: 0 32px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .navbar .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; font-weight: 700; color: #38bdf8; text-decoration: none;
+    }
+    .navbar .nav-right { display: flex; align-items: center; gap: 16px; font-size: 14px; color: #94a3b8; }
+    .date-time { background: #0f172a; padding: 6px 14px; border-radius: 6px; font-size: 13px; }
+
+    /* LAYOUT */
+    .layout { display: flex; height: calc(100vh - 60px); }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 240px; background: #1e293b; border-right: 1px solid #334155;
+      padding: 24px 0; display: flex; flex-direction: column; gap: 4px;
+    }
+    .sidebar .section-label {
+      font-size: 11px; text-transform: uppercase; color: #475569;
+      letter-spacing: 1px; padding: 8px 20px 4px; margin-top: 8px;
+    }
+    .sidebar a {
+      display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+      color: #94a3b8; text-decoration: none; font-size: 14px;
+      border-left: 3px solid transparent; transition: all 0.2s;
+    }
+    .sidebar a:hover { background: #0f172a; color: #e2e8f0; border-left-color: #38bdf8; }
+    .sidebar a.active { background: #0f172a; color: #38bdf8; border-left-color: #38bdf8; font-weight: 600; }
+    .sidebar a .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+
+    /* MAIN */
+    .main { flex: 1; overflow-y: auto; padding: 32px; }
+
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;
+    }
+    .page-header h1 { font-size: 24px; font-weight: 700; color: #f1f5f9; }
+    .page-header p  { font-size: 14px; color: #64748b; margin-top: 4px; }
+
+    /* BUTTONS */
+    .btn {
+      padding: 10px 20px; border-radius: 8px; font-size: 14px;
+      font-weight: 600; cursor: pointer; border: none;
+      transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary  { background: #dc2626; color: #fff; }
+    .btn-primary:hover { background: #b91c1c; }
+    .btn-sm       { padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; border: none; font-weight: 600; }
+    .btn-view     { background: #1e3a5f; color: #7dd3fc; }
+    .btn-view:hover { background: #1e40af; }
+    .btn-edit-sm  { background: #334155; color: #cbd5e1; }
+    .btn-edit-sm:hover { background: #475569; }
+    .btn-del      { background: #7f1d1d; color: #fca5a5; }
+    .btn-del:hover { background: #991b1b; }
+
+    /* STATS */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px; margin-bottom: 24px;
+    }
+    .mini-stat {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 10px; padding: 16px 20px;
+    }
+    .mini-stat .label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .mini-stat .value { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+    .mini-stat.red   { border-top: 3px solid #f87171; }
+    .mini-stat.amber { border-top: 3px solid #fbbf24; }
+    .mini-stat.blue  { border-top: 3px solid #38bdf8; }
+    .mini-stat.green { border-top: 3px solid #4ade80; }
+
+    /* TOOLBAR */
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-box {
+      flex: 1; min-width: 200px; background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; padding: 9px 16px; color: #e2e8f0; font-size: 14px;
+    }
+    .search-box:focus { outline: none; border-color: #38bdf8; }
+    .search-box::placeholder { color: #475569; }
+    select.filter {
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      padding: 9px 14px; color: #e2e8f0; font-size: 14px; cursor: pointer;
+    }
+    select.filter:focus { outline: none; border-color: #38bdf8; }
+
+    /* TABLE */
+    .table-wrap {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 12px; overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: #0f172a; }
+    thead th {
+      padding: 13px 16px; text-align: left; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: #64748b; border-bottom: 1px solid #334155;
+    }
+    tbody tr { border-bottom: 1px solid #1e3a5f22; transition: background 0.15s; }
+    tbody tr:hover { background: #0f172a; }
+    tbody tr:last-child { border-bottom: none; }
+    td { padding: 12px 16px; color: #cbd5e1; vertical-align: middle; }
+    td strong { color: #f1f5f9; font-weight: 600; }
+
+    .badge {
+      display: inline-block; padding: 3px 9px;
+      border-radius: 20px; font-size: 11px; font-weight: 600;
+    }
+    .badge-open     { background: #7f1d1d; color: #fca5a5; }
+    .badge-progress { background: #78350f; color: #fcd34d; }
+    .badge-closed   { background: #14532d; color: #4ade80; }
+
+    .empty-state { text-align: center; padding: 48px; color: #475569; }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75); z-index: 200;
+      align-items: flex-start; justify-content: center;
+      padding: 24px 16px; overflow-y: auto;
+    }
+    .modal-overlay.show { display: flex; }
+
+    .modal {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 16px; padding: 32px;
+      width: 100%; max-width: 720px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+      margin: auto;
+    }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .modal-header h2 { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+    .modal-close {
+      background: #334155; border: none; color: #94a3b8;
+      width: 32px; height: 32px; border-radius: 8px;
+      font-size: 18px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .modal-close:hover { background: #475569; color: #fff; }
+
+    /* SECTION DIVIDERS INSIDE MODAL */
+    .form-section {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #334155;
+    }
+    .form-section:last-of-type { border-bottom: none; margin-bottom: 0; }
+
+    .form-section-title {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+      color: #38bdf8; font-weight: 700; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    .form-group label {
+      font-size: 12px; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; padding: 9px 12px;
+      color: #e2e8f0; font-size: 14px; font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { outline: none; border-color: #38bdf8; }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+      user-select: text;
+      -webkit-user-select: text;
+      cursor: text;
+    }
+
+    .calc-display {
+      background: #0f172a; border: 1px solid #1e40af;
+      border-radius: 8px; padding: 10px 14px;
+      color: #38bdf8; font-size: 15px; font-weight: 700;
+      min-height: 40px; display: flex; align-items: center;
+    }
+
+    /* History table inside modal */
+    .history-table-wrap {
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; overflow: hidden; margin-bottom: 10px;
+    }
+    .history-table-wrap table { font-size: 13px; }
+    .history-table-wrap thead th {
+      background: #1e293b; padding: 9px 12px;
+      font-size: 11px; color: #64748b;
+    }
+    .history-table-wrap td { padding: 9px 12px; border-bottom: 1px solid #1e293b; }
+    .history-table-wrap tbody tr:last-child td { border-bottom: none; }
+
+    .add-history-row {
+      display: grid; grid-template-columns: 1fr 1fr auto;
+      gap: 10px; align-items: end;
+    }
+    .btn-add-row {
+      background: #0369a1; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 9px 16px; font-size: 13px;
+      font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .btn-add-row:hover { background: #0284c7; }
+    .del-row-btn {
+      background: none; border: none; color: #f87171;
+      cursor: pointer; font-size: 16px; padding: 0 4px;
+    }
+
+    .modal-actions {
+      display: flex; justify-content: flex-end;
+      gap: 10px; margin-top: 24px; padding-top: 20px;
+      border-top: 1px solid #334155;
+    }
+    .btn-cancel {
+      background: #334155; color: #cbd5e1;
+      padding: 10px 22px; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+    }
+    .btn-cancel:hover { background: #475569; }
+
+    /* DETAIL MODAL */
+    .detail-modal {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 16px; padding: 32px;
+      width: 100%; max-width: 680px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6); margin: auto;
+    }
+    .detail-section { margin-bottom: 20px; }
+    .detail-section h3 {
+      font-size: 12px; text-transform: uppercase; color: #38bdf8;
+      letter-spacing: 1px; margin-bottom: 10px;
+    }
+    .detail-row {
+      display: flex; justify-content: space-between;
+      padding: 9px 0; border-bottom: 1px solid #0f172a;
+      font-size: 14px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row .dk { color: #64748b; }
+    .detail-row .dv { color: #e2e8f0; font-weight: 500; text-align: right; max-width: 60%; }
+
+    /* ── BREAKDOWN HISTORY PANEL ── */
+    .history-panel {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 12px; margin-top: 32px; overflow: hidden;
+    }
+    .history-panel-header {
+      background: #0f172a; padding: 16px 20px;
+      border-bottom: 1px solid #334155;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .history-panel-header h2 {
+      font-size: 16px; font-weight: 700; color: #f1f5f9;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .history-filters {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .history-filters input,
+    .history-filters select {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; padding: 7px 12px;
+      color: #e2e8f0; font-size: 13px;
+    }
+    .history-filters input:focus,
+    .history-filters select:focus { outline: none; border-color: #38bdf8; }
+    .history-filters input { min-width: 200px; }
+
+    .machine-history-block {
+      border-bottom: 1px solid #334155; padding: 0;
+    }
+    .machine-history-block:last-child { border-bottom: none; }
+
+    .machine-history-title {
+      background: #162032; padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+    }
+    .machine-history-title:hover { background: #1a2a40; }
+    .machine-history-title .mht-left {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; font-weight: 700; color: #38bdf8;
+    }
+    .machine-history-title .mht-right {
+      display: flex; align-items: center; gap: 10px; font-size: 12px; color: #64748b;
+    }
+    .mht-toggle { font-size: 12px; color: #64748b; transition: transform 0.2s; }
+    .mht-toggle.open { transform: rotate(180deg); }
+
+    .machine-history-rows { display: none; }
+    .machine-history-rows.open { display: block; }
+
+    .hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .hist-table thead tr { background: #0f172a; }
+    .hist-table thead th {
+      padding: 10px 16px; text-align: left;
+      font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #64748b;
+      border-bottom: 1px solid #334155;
+    }
+    .hist-table tbody tr { border-bottom: 1px solid #1e3a5f22; transition: background 0.15s; }
+    .hist-table tbody tr:hover { background: #0f172a55; }
+    .hist-table tbody tr:last-child { border-bottom: none; }
+    .hist-table td { padding: 11px 16px; color: #cbd5e1; vertical-align: middle; }
+    .hist-table td strong { color: #f1f5f9; }
+
+    /* Editable TTR cell */
+    .ttr-cell { display: flex; align-items: center; gap: 6px; }
+    .ttr-value { color: #4ade80; font-weight: 600; }
+    .ttr-edit-btn {
+      background: none; border: none; color: #64748b;
+      cursor: pointer; font-size: 13px; padding: 2px 4px;
+      border-radius: 4px; transition: color 0.2s;
+    }
+    .ttr-edit-btn:hover { color: #38bdf8; background: #334155; }
+    .ttr-input-wrap {
+      display: none; align-items: center; gap: 6px;
+    }
+    .ttr-input-wrap.show { display: flex; }
+    .ttr-input {
+      background: #0f172a; border: 1px solid #38bdf8;
+      border-radius: 6px; padding: 4px 8px; color: #e2e8f0;
+      font-size: 13px; width: 90px;
+    }
+    .ttr-input:focus { outline: none; }
+    .ttr-save-btn {
+      background: #16a34a; border: none; color: #fff;
+      border-radius: 5px; padding: 4px 8px; font-size: 12px;
+      cursor: pointer; font-weight: 600;
+    }
+    .ttr-cancel-btn {
+      background: #334155; border: none; color: #94a3b8;
+      border-radius: 5px; padding: 4px 8px; font-size: 12px; cursor: pointer;
+    }
+
+    /* same ttr-cell styles for main table */
+    #bd-tbody .ttr-cell { display: flex; align-items: center; gap: 6px; }
+
+    .hist-no-data {
+      text-align: center; padding: 28px; color: #475569; font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .form-grid, .form-grid-3 { grid-template-columns: 1fr; }
+      .add-history-row { grid-template-columns: 1fr; }
+      .history-filters input { min-width: 140px; }
+    }
+
+    /* ── PARTS SELECTOR ── */
+    .parts-panel-row {
+      display: grid; grid-template-columns: 1fr 1fr 80px 100px auto;
+      gap: 8px; align-items: center; padding: 9px 10px;
+      border-bottom: 1px solid #1e293b; font-size: 13px;
+    }
+    .parts-panel-row:last-child { border-bottom: none; }
+    .parts-panel-row:hover { background: #0f172a; }
+    .parts-panel-header {
+      display: grid; grid-template-columns: 1fr 1fr 80px 100px auto;
+      gap: 8px; padding: 7px 10px;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+      color: #475569; border-bottom: 1px solid #334155;
+      background: #0f172a;
+    }
+    .pp-qty-input {
+      width: 64px; background: #1e293b; border: 1px solid #334155;
+      border-radius: 6px; padding: 5px 8px; color: #e2e8f0;
+      font-size: 13px; text-align: center;
+    }
+    .pp-qty-input:focus { outline: none; border-color: #38bdf8; }
+    .btn-pp-add {
+      background: #0369a1; color: #fff; border: none; border-radius: 6px;
+      padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-pp-add:hover { background: #0284c7; }
+    .btn-pp-add:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .selected-part-row {
+      display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+      background: #0a1628; border: 1px solid #1e40af44; border-radius: 8px;
+      margin-bottom: 6px; font-size: 13px; flex-wrap: wrap;
+    }
+    .sp-name  { flex: 1; color: #e2e8f0; font-weight: 600; min-width: 120px; }
+    .sp-spec  { color: #94a3b8; min-width: 80px; }
+    .sp-qty   { color: #38bdf8; font-weight: 700; white-space: nowrap; }
+    .btn-sp-remove {
+      background: none; border: none; color: #f87171; cursor: pointer;
+      font-size: 16px; padding: 0 4px; border-radius: 4px;
+    }
+    .btn-sp-remove:hover { background: #7f1d1d; }
+    .pp-no-results { padding: 20px; text-align: center; color: #475569; font-size: 13px; }
+    /* toast for breakdowns */
+    .bd-toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      padding: 14px 20px; font-size: 14px; color: #e2e8f0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      transform: translateY(80px); opacity: 0; transition: all 0.3s;
+      max-width: 380px; line-height: 1.5;
+    }
+    .bd-toast.show { transform: translateY(0); opacity: 1; }
+    .bd-toast.warn { border-left: 4px solid #fbbf24; }
+    .bd-toast.success { border-left: 4px solid #4ade80; }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="index.html" class="logo">⚙️ Maintenance Management System</a>
+  <div class="nav-right">
+    <span id="live-clock" class="date-time"></span>
+    <span>👤 Engineer</span>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <span class="section-label">Main</span>
+    <a href="index.html"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="machines.html"><span class="nav-icon">🏭</span> Machines</a>
+    <span class="section-label">Operations</span>
+    <a href="breakdowns.html" class="active"><span class="nav-icon">🔴</span> Breakdowns</a>
+    <span class="section-label">Inventory</span>
+    <a href="spareparts.html"><span class="nav-icon">📦</span> Spare Parts</a>
+    <span class="section-label">Analytics</span>
+    <a href="kpi.html"><span class="nav-icon">📊</span> KPI (MTTR/MTBF)</a>
+    <a href="reports.html"><span class="nav-icon">📄</span> Monthly Reports</a>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>🔴 Breakdowns</h1>
+        <p>Log and track all machine breakdown events</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openAddModal()">＋ Log Breakdown</button>
+        <button class="btn" id="btn-test-data"
+          style="background:#7c3aed;color:#fff;border:2px dashed #a78bfa"
+          onclick="showTestPanel()">🧪 Load Test Data</button>
+      </div>
+    </div>
+
+    <!-- TEST DATA PANEL -->
+    <div id="test-panel" style="display:none;background:#1a0a2e;border:2px dashed #7c3aed;
+         border-radius:12px;padding:20px 24px;margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#c084fc">🧪 Test Data Generator</div>
+          <div style="font-size:12px;color:#7c3aed;margin-top:3px">
+            Generates 3 years × 12 months × all machines × 1–5 breakdowns each (random, varied downtime)
+          </div>
+        </div>
+        <button onclick="document.getElementById('test-panel').style.display='none'"
+          style="background:#334155;border:none;color:#94a3b8;border-radius:8px;
+                 padding:6px 12px;cursor:pointer;font-size:13px">✕ Close</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px">Start Year</label>
+          <select id="td-start-year" style="background:#0f172a;border:1px solid #7c3aed;
+            border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px">
+            <option value="2022">2022</option>
+            <option value="2023">2023</option>
+            <option value="2024" selected>2024</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px">End Year</label>
+          <select id="td-end-year" style="background:#0f172a;border:1px solid #7c3aed;
+            border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px">
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-self:flex-end">
+          <button onclick="generateTestData()" style="background:#7c3aed;color:#fff;
+            border:none;border-radius:8px;padding:9px 20px;font-size:14px;
+            font-weight:700;cursor:pointer">⚡ Generate &amp; Load</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-self:flex-end">
+          <button onclick="clearTestData()" style="background:#7f1d1d;color:#fca5a5;
+            border:none;border-radius:8px;padding:9px 20px;font-size:14px;
+            font-weight:600;cursor:pointer">🗑 Clear All Data</button>
+        </div>
+      </div>
+      <div id="test-log" style="display:none;margin-top:14px;background:#0f172a;
+           border-radius:8px;padding:12px 16px;font-size:12px;color:#94a3b8;
+           max-height:160px;overflow-y:auto;line-height:1.8;font-family:monospace"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row" id="stats-row"></div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <input class="search-box" type="text" id="searchInput"
+             placeholder="🔍  Search by machine, technician, operator…" oninput="renderTable()"/>
+      <select class="filter" id="machineFilter" onchange="renderTable()">
+        <option value="">All Machines</option>
+      </select>
+      <select class="filter" id="statusFilter" onchange="renderTable()">
+        <option value="">All Status</option>
+        <option value="Open">Open</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Closed">Closed</option>
+      </select>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>BD Ref</th>
+            <th>Machine</th>
+            <th>Breakdown Date</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Total Time</th>
+            <th>Technician</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bd-tbody"></tbody>
+      </table>
+      <div id="empty-state" class="empty-state" style="display:none">
+        <div class="empty-icon">🔴</div>
+        <div>No breakdowns recorded yet. Click "Log Breakdown" to add one.</div>
+      </div>
+    </div>
+
+    <!-- ══════════════ BREAKDOWN HISTORY PANEL ══════════════ -->
+    <div class="history-panel">
+      <div class="history-panel-header">
+        <h2>📅 Breakdown History (Machine-wise)</h2>
+        <div class="history-filters">
+          <input type="text" id="hist-search" placeholder="🔍 Search machine, technician, problem…"
+                 oninput="renderHistory()" />
+          <select id="hist-year" onchange="renderHistory()">
+            <option value="">All Years</option>
+          </select>
+          <select id="hist-month" onchange="renderHistory()">
+            <option value="">All Months</option>
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+          <select id="hist-machine" onchange="renderHistory()">
+            <option value="">All Machines</option>
+          </select>
+        </div>
+      </div>
+      <div id="history-panel-body"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════ ADD / EDIT MODAL ══════════════ -->
+<div class="modal-overlay" id="bdModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">🔴 Log New Breakdown</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- SECTION 1: Machine & Timing -->
+    <div class="form-section">
+      <div class="form-section-title">🏭 Machine & Time Details</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Machine *</label>
+          <select id="f-machine">
+            <option value="">— Select Machine —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="f-status">
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Breakdown Date *</label>
+          <input type="date" id="f-bd-date" />
+        </div>
+        <div class="form-group">
+          <label>Time of Breakdown *</label>
+          <input type="time" id="f-start-time" oninput="calcTTR()" />
+        </div>
+        <div class="form-group">
+          <label>Date of Completion</label>
+          <input type="date" id="f-end-date" oninput="calcTTR()" />
+        </div>
+        <div class="form-group">
+          <label>Time of Completion</label>
+          <input type="time" id="f-end-time" oninput="calcTTR()" />
+        </div>
+        <div class="form-group full">
+          <label>Total Time to Repair (auto-calculated)</label>
+          <div class="calc-display" id="ttr-display">— Enter start & end time —</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: Personnel -->
+    <div class="form-section">
+      <div class="form-section-title">👷 Personnel</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Technician Attending *</label>
+          <input type="text" id="f-technician" placeholder="Name of maintenance technician" />
+        </div>
+        <div class="form-group">
+          <label>Machine Operator</label>
+          <input type="text" id="f-operator" placeholder="Name of machine operator" />
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: Problem Description -->
+    <div class="form-section">
+      <div class="form-section-title">🔍 Problem Description</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Fault / Problem Description *</label>
+          <textarea id="f-problem"
+            placeholder="Describe the fault or breakdown symptom observed… (Ctrl+V to paste)"
+            spellcheck="true"
+            autocomplete="off"
+            style="min-height:110px"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Action Taken / Repair Description</label>
+          <textarea id="f-action"
+            placeholder="Describe what was done to repair the machine… (Ctrl+V to paste)"
+            spellcheck="true"
+            autocomplete="off"
+            style="min-height:110px"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Root Cause</label>
+          <input type="text" id="f-rootcause" placeholder="e.g. Bearing failure, overload…" />
+        </div>
+        <div class="form-group full">
+          <label>Spare Parts Used</label>
+          <!-- Hidden legacy field for backward compat -->
+          <input type="hidden" id="f-parts" />
+          <!-- Smart parts selector -->
+          <div id="parts-selector-wrap">
+            <button type="button" class="btn-add-row" onclick="togglePartsPanel()" style="margin-bottom:8px">
+              ＋ Add Part from Inventory
+            </button>
+            <!-- Collapsible panel -->
+            <div id="parts-panel" style="display:none;background:#0a1628;border:1px solid #334155;border-radius:10px;padding:14px;margin-bottom:10px">
+              <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                <input type="text" id="parts-search" placeholder="🔍 Search parts…"
+                  style="flex:1;min-width:180px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:13px"
+                  oninput="renderPartsPanel()" />
+                <select id="parts-machine-filter"
+                  style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:13px"
+                  onchange="renderPartsPanel()">
+                  <option value="">All Machines</option>
+                </select>
+              </div>
+              <div id="parts-list" style="max-height:260px;overflow-y:auto"></div>
+            </div>
+            <!-- Selected parts list -->
+            <div id="selected-parts-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: Problem History -->
+    <div class="form-section">
+      <div class="form-section-title">📋 Problem History (Previous Occurrences)</div>
+      <div class="history-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Problem & Action</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr id="history-empty-row">
+              <td colspan="3" style="text-align:center; color:#475569; padding:14px">
+                No history entries yet
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="add-history-row">
+        <div class="form-group">
+          <label>Previous Date</label>
+          <input type="date" id="h-date" />
+        </div>
+        <div class="form-group">
+          <label>Problem & Action Summary</label>
+          <input type="text" id="h-note" placeholder="Brief description of past issue and fix…" />
+        </div>
+        <button class="btn-add-row" onclick="addHistoryRow()">＋ Add</button>
+      </div>
+    </div>
+
+    <!-- SECTION 5: Remarks -->
+    <div class="form-section">
+      <div class="form-section-title">📝 Additional Remarks</div>
+      <div class="form-group">
+        <label>Remarks / Follow-up Notes</label>
+        <textarea id="f-remarks"
+            placeholder="Any follow-up actions, recommendations, or observations… (Ctrl+V to paste)"
+            spellcheck="true"
+            autocomplete="off"
+            style="min-height:90px"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBreakdown()">💾 Save Breakdown</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DETAIL VIEW MODAL ══════════════ -->
+<div class="modal-overlay" id="detailModal">
+  <div class="detail-modal">
+    <div class="modal-header">
+      <h2 id="d-title">Breakdown Detail</h2>
+      <button class="modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="detail-content"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDetail()">Close</button>
+      <button class="btn btn-edit-sm btn-sm" style="background:#334155;color:#cbd5e1"
+              onclick="editFromDetail()">✏️ Edit</button>
+    </div>
+  </div>
+</div>
+
+<div class="bd-toast" id="bd-toast"></div>
+
+<script>
+  // ── STORAGE ──────────────────────────────────────────────────
+  const BD_KEY  = 'mms_breakdowns';
+  const MAC_KEY = 'mms_machines';
+
+  function loadBD()       { return JSON.parse(localStorage.getItem(BD_KEY)  || '[]'); }
+  function loadMachines() { return JSON.parse(localStorage.getItem(MAC_KEY) || '[]'); }
+  function saveBD(data)   { localStorage.setItem(BD_KEY, JSON.stringify(data)); }
+  function loadSpares()   { return JSON.parse(localStorage.getItem('mms_spares') || '[]'); }
+  function saveSpares(d)  { localStorage.setItem('mms_spares', JSON.stringify(d)); }
+
+  let breakdowns  = loadBD();
+  let machines    = loadMachines();
+  let editIndex   = null;
+  let detailIdx   = null;
+  let selectedParts = []; // {spareId, spareName, specification, qtyUsed}
+
+  // ── TOAST ─────────────────────────────────────────────────────
+  let bdToastTimer = null;
+  function showBdToast(msg, type) {
+    const el = document.getElementById('bd-toast');
+    el.innerHTML = msg;
+    el.className = 'bd-toast ' + (type || '');
+    el.classList.add('show');
+    if (bdToastTimer) clearTimeout(bdToastTimer);
+    bdToastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+  }
+
+  // ── PARTS PANEL ───────────────────────────────────────────────
+  function populatePartsMachineFilter() {
+    const sel = document.getElementById('parts-machine-filter');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">All Machines</option>' +
+      machines.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
+  }
+
+  function togglePartsPanel() {
+    const panel = document.getElementById('parts-panel');
+    const isVisible = panel.style.display !== 'none';
+    panel.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) {
+      renderPartsPanel();
+      document.getElementById('parts-search').focus();
+    }
+  }
+
+  function renderPartsPanel() {
+    const search  = (document.getElementById('parts-search').value || '').toLowerCase();
+    const machine = document.getElementById('parts-machine-filter').value;
+    const spares  = loadSpares();
+
+    const filtered = spares.filter(s => {
+      const matchSearch =
+        (s.spareName||'').toLowerCase().includes(search) ||
+        (s.specification||'').toLowerCase().includes(search) ||
+        (s.machine||'').toLowerCase().includes(search);
+      const matchMachine = machine ? s.machine === machine : true;
+      return matchSearch && matchMachine;
+    });
+
+    const container = document.getElementById('parts-list');
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="pp-no-results">No spare parts found. Add parts in the Spare Parts page.</div>';
+      return;
+    }
+
+    let html = `<div class="parts-panel-header">
+      <span>Part Name</span><span>Specification</span>
+      <span>Stock</span><span>Min Stock</span><span></span>
+    </div>`;
+    html += filtered.map(s => {
+      const alreadyAdded = selectedParts.some(p => p.spareId === s.id);
+      const stockColor = s.qtyInStock === 0 ? '#f87171' : s.qtyInStock <= s.minStockReq ? '#fbbf24' : '#4ade80';
+      const maxQty = s.qtyInStock;
+      return `
+        <div class="parts-panel-row">
+          <span style="color:#e2e8f0;font-weight:600">${s.spareName}</span>
+          <span style="color:#94a3b8">${s.specification||'—'}</span>
+          <span style="color:${stockColor};font-weight:700">${s.qtyInStock}</span>
+          <span style="color:#64748b">${s.minStockReq}</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" class="pp-qty-input" id="ppqty-${s.id}"
+              value="1" min="1" max="${maxQty}" ${maxQty===0?'disabled':''} />
+            <button class="btn-pp-add" onclick="addPartToSelected('${s.id}')"
+              ${alreadyAdded || maxQty===0 ? 'disabled' : ''}>
+              ${alreadyAdded ? '✓ Added' : maxQty===0 ? 'No Stock' : '＋ Add'}
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+    container.innerHTML = html;
+  }
+
+  function addPartToSelected(spareId) {
+    const spares = loadSpares();
+    const s = spares.find(x => x.id === spareId);
+    if (!s) return;
+    const qtyInput = document.getElementById('ppqty-' + spareId);
+    const qty = parseInt(qtyInput ? qtyInput.value : 1) || 1;
+    if (qty <= 0 || qty > s.qtyInStock) {
+      alert(`⚠️ Invalid quantity. Available: ${s.qtyInStock}`); return;
+    }
+    if (selectedParts.some(p => p.spareId === spareId)) {
+      alert('This part is already in the list.'); return;
+    }
+    selectedParts.push({ spareId: s.id, spareName: s.spareName, specification: s.specification||'', qtyUsed: qty });
+    renderSelectedParts();
+    renderPartsPanel(); // refresh to show "Added"
+  }
+
+  function removeSelectedPart(spareId) {
+    selectedParts = selectedParts.filter(p => p.spareId !== spareId);
+    renderSelectedParts();
+    renderPartsPanel();
+  }
+
+  function renderSelectedParts() {
+    const container = document.getElementById('selected-parts-list');
+    if (!container) return;
+    if (selectedParts.length === 0) {
+      container.innerHTML = '<div style="color:#475569;font-size:13px;padding:6px 0">No parts selected yet.</div>';
+      return;
+    }
+    container.innerHTML = selectedParts.map(p => `
+      <div class="selected-part-row">
+        <span class="sp-name">📦 ${p.spareName}</span>
+        <span class="sp-spec">${p.specification||'—'}</span>
+        <span class="sp-qty">Qty: ${p.qtyUsed}</span>
+        <button class="btn-sp-remove" onclick="removeSelectedPart('${p.spareId}')">✕</button>
+      </div>`).join('');
+  }
+
+  // ── POPULATE MACHINE DROPDOWNS ────────────────────────────────
+  function populateMachineDropdowns() {
+    const opts = machines.map(m =>
+      `<option value="${m.id}">${m.id} — ${m.name}</option>`
+    ).join('');
+
+    document.getElementById('f-machine').innerHTML =
+      '<option value="">— Select Machine —</option>' + opts;
+
+    document.getElementById('machineFilter').innerHTML =
+      '<option value="">All Machines</option>' +
+      machines.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
+
+    populatePartsMachineFilter();
+  }
+
+  // ── AUTO-CALCULATE TTR ────────────────────────────────────────
+  function calcTTR() {
+    const bdDate   = document.getElementById('f-bd-date').value;
+    const startT   = document.getElementById('f-start-time').value;
+    const endDate  = document.getElementById('f-end-date').value;
+    const endT     = document.getElementById('f-end-time').value;
+    const display  = document.getElementById('ttr-display');
+
+    if (!bdDate || !startT || !endDate || !endT) {
+      display.textContent = '— Enter start & end time —';
+      return;
+    }
+
+    const start = new Date(`${bdDate}T${startT}`);
+    const end   = new Date(`${endDate}T${endT}`);
+    const diff  = end - start;
+
+    if (diff <= 0) {
+      display.textContent = '⚠️ End time must be after start time';
+      display.style.color = '#f87171';
+      return;
+    }
+
+    display.style.color = '#4ade80';
+    const totalMins = Math.floor(diff / 60000);
+    const hrs  = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    display.textContent = `${hrs}h ${mins}m  (${(totalMins / 60).toFixed(2)} hours)`;
+  }
+
+  function getTTRMinutes() {
+    const bdDate  = document.getElementById('f-bd-date').value;
+    const startT  = document.getElementById('f-start-time').value;
+    const endDate = document.getElementById('f-end-date').value;
+    const endT    = document.getElementById('f-end-time').value;
+    if (!bdDate || !startT || !endDate || !endT) return 0;
+    const diff = new Date(`${endDate}T${endT}`) - new Date(`${bdDate}T${startT}`);
+    return diff > 0 ? Math.floor(diff / 60000) : 0;
+  }
+
+  // ── HISTORY ROWS (inside modal) ───────────────────────────────
+  function renderHistoryTable() {
+    const tbody = document.getElementById('history-tbody');
+    if (historyRows.length === 0) {
+      tbody.innerHTML = `<tr id="history-empty-row">
+        <td colspan="3" style="text-align:center;color:#475569;padding:14px">No history entries yet</td>
+      </tr>`;
+      return;
+    }
+    tbody.innerHTML = historyRows.map((r, i) => `
+      <tr>
+        <td>${r.date || '—'}</td>
+        <td>${r.note}</td>
+        <td><button class="del-row-btn" onclick="removeHistoryRow(${i})">✕</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function addHistoryRow() {
+    const date = document.getElementById('h-date').value;
+    const note = document.getElementById('h-note').value.trim();
+    if (!note) { alert('Please enter a problem/action description.'); return; }
+    historyRows.push({ date, note });
+    document.getElementById('h-date').value = '';
+    document.getElementById('h-note').value = '';
+    renderHistoryTable();
+  }
+
+  function removeHistoryRow(i) {
+    historyRows.splice(i, 1);
+    renderHistoryTable();
+  }
+
+  // ── OPEN MODAL ────────────────────────────────────────────────
+  function openAddModal() {
+    editIndex = null;
+    historyRows = [];
+    selectedParts = [];
+    document.getElementById('modal-title').textContent = '🔴 Log New Breakdown';
+
+    // Reset all fields
+    ['f-machine','f-status'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-status').value = 'Open';
+    document.getElementById('f-bd-date').value   = new Date().toISOString().split('T')[0];
+    document.getElementById('f-end-date').value  = new Date().toISOString().split('T')[0];
+    document.getElementById('f-start-time').value = '';
+    document.getElementById('f-end-time').value   = '';
+    document.getElementById('f-technician').value = '';
+    document.getElementById('f-operator').value   = '';
+    document.getElementById('f-problem').value    = '';
+    document.getElementById('f-action').value     = '';
+    document.getElementById('f-rootcause').value  = '';
+    document.getElementById('f-parts').value      = '';
+    document.getElementById('f-remarks').value    = '';
+    document.getElementById('ttr-display').textContent = '— Enter start & end time —';
+    document.getElementById('ttr-display').style.color = '#38bdf8';
+    document.getElementById('parts-panel').style.display = 'none';
+    renderSelectedParts();
+    renderHistoryTable();
+    document.getElementById('bdModal').classList.add('show');
+  }
+
+  function openEditModal(index) {
+    editIndex = index;
+    const b = breakdowns[index];
+    document.getElementById('modal-title').textContent = '✏️ Edit Breakdown — ' + b.ref;
+
+    document.getElementById('f-machine').value    = b.machine;
+    document.getElementById('f-status').value     = b.status;
+    document.getElementById('f-bd-date').value    = b.bdDate;
+    document.getElementById('f-start-time').value = b.startTime;
+    document.getElementById('f-end-date').value   = b.endDate || '';
+    document.getElementById('f-end-time').value   = b.endTime || '';
+    document.getElementById('f-technician').value = b.technician;
+    document.getElementById('f-operator').value   = b.operator || '';
+    document.getElementById('f-problem').value    = b.problem;
+    document.getElementById('f-action').value     = b.action || '';
+    document.getElementById('f-rootcause').value  = b.rootCause || '';
+    document.getElementById('f-parts').value      = b.parts || '';
+    document.getElementById('f-remarks').value    = b.remarks || '';
+
+    // Restore selected parts from saved partsUsed
+    selectedParts = b.partsUsed ? b.partsUsed.map(p => ({
+      spareId: p.spareId, spareName: p.spareName,
+      specification: p.specification||'', qtyUsed: p.qtyUsed
+    })) : [];
+    document.getElementById('parts-panel').style.display = 'none';
+    renderSelectedParts();
+
+    historyRows = b.history ? [...b.history] : [];
+    renderHistoryTable();
+    calcTTR();
+
+    document.getElementById('bdModal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('bdModal').classList.remove('show');
+  }
+
+  // ── SAVE ──────────────────────────────────────────────────────
+  function saveBreakdown() {
+    const machine    = document.getElementById('f-machine').value;
+    const bdDate     = document.getElementById('f-bd-date').value;
+    const startTime  = document.getElementById('f-start-time').value;
+    const technician = document.getElementById('f-technician').value.trim();
+    const problem    = document.getElementById('f-problem').value.trim();
+
+    if (!machine)    { alert('Please select a machine.'); return; }
+    if (!bdDate)     { alert('Please enter breakdown date.'); return; }
+    if (!startTime)  { alert('Please enter time of breakdown.'); return; }
+    if (!technician) { alert('Please enter the technician name.'); return; }
+    if (!problem)    { alert('Please describe the problem.'); return; }
+
+    // ── Validate spare parts stock ──────────────────────────────
+    const spares = loadSpares();
+    for (const p of selectedParts) {
+      const s = spares.find(x => x.id === p.spareId);
+      if (!s) continue;
+      if (s.qtyInStock === 0) {
+        alert(`❌ "${p.spareName}" is OUT OF STOCK. Cannot log this part.`);
+        return;
+      }
+      if (p.qtyUsed > s.qtyInStock) {
+        alert(`❌ "${p.spareName}": requested qty (${p.qtyUsed}) exceeds available stock (${s.qtyInStock}).`);
+        return;
+      }
+    }
+
+    const ttrMins    = getTTRMinutes();
+    const ttrDisplay = document.getElementById('ttr-display').textContent;
+    const bdRef      = editIndex === null
+                        ? 'BD-' + String(Date.now()).slice(-6)
+                        : breakdowns[editIndex].ref;
+
+    // ── Deduct stock for new breakdowns (or re-save edits) ─────
+    // For edits: re-add old parts stock then re-deduct new ones
+    if (editIndex !== null && breakdowns[editIndex].partsUsed) {
+      // Re-add previously deducted stock
+      const prevParts = breakdowns[editIndex].partsUsed || [];
+      prevParts.forEach(pp => {
+        const s = spares.find(x => x.id === pp.spareId);
+        if (s) {
+          s.qtyInStock += pp.qtyUsed;
+          s.movements = s.movements || [];
+          s.movements.push({
+            type:'add', qty: pp.qtyUsed,
+            reason: 'Edit re-adjustment for ' + bdRef,
+            ref: bdRef, date: new Date().toISOString().split('T')[0]
+          });
+        }
+      });
+    }
+
+    // Deduct new selection
+    const lowStockWarnings = [];
+    selectedParts.forEach(p => {
+      const s = spares.find(x => x.id === p.spareId);
+      if (!s) return;
+      s.qtyInStock -= p.qtyUsed;
+      s.movements = s.movements || [];
+      s.movements.push({
+        type:'deduct', qty: p.qtyUsed,
+        reason: 'Breakdown ' + bdRef,
+        ref: bdRef, date: bdDate
+      });
+      if (s.qtyInStock <= s.minStockReq) {
+        lowStockWarnings.push(`⚠️ "${s.spareName}" is now at LOW STOCK level (${s.qtyInStock} remaining)`);
+      }
+    });
+    saveSpares(spares);
+
+    // Build legacy parts string for backward compatibility
+    const partsStr = selectedParts.map(p => `${p.spareName}${p.specification ? ' ('+p.specification+')' : ''} ×${p.qtyUsed}`).join(', ');
+    document.getElementById('f-parts').value = partsStr;
+
+    const entry = {
+      ref:        bdRef,
+      machine,
+      status:     document.getElementById('f-status').value,
+      bdDate,
+      startTime,
+      endDate:    document.getElementById('f-end-date').value,
+      endTime:    document.getElementById('f-end-time').value,
+      ttrMins,
+      ttrDisplay: ttrMins > 0 ? ttrDisplay : '—',
+      technician,
+      operator:   document.getElementById('f-operator').value.trim(),
+      problem,
+      action:     document.getElementById('f-action').value.trim(),
+      rootCause:  document.getElementById('f-rootcause').value.trim(),
+      parts:      partsStr,
+      partsUsed:  selectedParts.map(p => ({...p})),
+      remarks:    document.getElementById('f-remarks').value.trim(),
+      history:    [...historyRows],
+      createdAt:  editIndex === null ? new Date().toISOString()
+                    : breakdowns[editIndex].createdAt,
+    };
+
+    if (editIndex === null) breakdowns.push(entry);
+    else breakdowns[editIndex] = entry;
+
+    saveBD(breakdowns);
+    closeModal();
+    renderStats();
+    renderTable();
+    renderHistory();
+
+    // Show low stock warnings as toasts
+    if (lowStockWarnings.length > 0) {
+      showBdToast(lowStockWarnings.join('<br>'), 'warn');
+    }
+  }
+
+  // ── DELETE ────────────────────────────────────────────────────
+  function deleteBreakdown(index) {
+    if (!confirm('Delete breakdown "' + breakdowns[index].ref + '"?')) return;
+    breakdowns.splice(index, 1);
+    saveBD(breakdowns);
+    renderStats();
+    renderTable();
+    renderHistory();
+  }
+
+  // ── DETAIL VIEW ───────────────────────────────────────────────
+  function viewDetail(index) {
+    detailIdx = index;
+    const b = breakdowns[index];
+
+    document.getElementById('d-title').textContent = '🔴 ' + b.ref + ' — ' + b.machine;
+
+    const badgeClass = { Open:'badge-open', 'In Progress':'badge-progress', Closed:'badge-closed' }[b.status] || 'badge-open';
+
+    let histHTML = '<em style="color:#475569">No previous history recorded</em>';
+    if (b.history && b.history.length > 0) {
+      histHTML = `<table style="width:100%;font-size:13px;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 10px;color:#64748b;font-size:11px">Date</th>
+          <th style="text-align:left;padding:6px 10px;color:#64748b;font-size:11px">Problem & Action</th>
+        </tr></thead><tbody>
+        ${b.history.map(h=>`<tr>
+          <td style="padding:6px 10px;color:#94a3b8;border-top:1px solid #334155">${h.date||'—'}</td>
+          <td style="padding:6px 10px;color:#cbd5e1;border-top:1px solid #334155">${h.note}</td>
+        </tr>`).join('')}
+        </tbody></table>`;
+    }
+
+    document.getElementById('detail-content').innerHTML = `
+      <div class="detail-section">
+        <h3>🏭 Machine & Time</h3>
+        <div class="detail-row"><span class="dk">Machine</span><span class="dv">${b.machine}</span></div>
+        <div class="detail-row"><span class="dk">Status</span>
+          <span class="dv"><span class="badge ${badgeClass}">${b.status}</span></span></div>
+        <div class="detail-row"><span class="dk">Breakdown Date</span><span class="dv">${b.bdDate}</span></div>
+        <div class="detail-row"><span class="dk">Time of Breakdown</span><span class="dv">${b.startTime || '—'}</span></div>
+        <div class="detail-row"><span class="dk">Date of Completion</span><span class="dv">${b.endDate || '—'}</span></div>
+        <div class="detail-row"><span class="dk">Time of Completion</span><span class="dv">${b.endTime || '—'}</span></div>
+        <div class="detail-row"><span class="dk">Total Time to Repair</span>
+          <span class="dv" style="color:#4ade80;font-weight:700">${b.ttrDisplay || '—'}</span></div>
+      </div>
+      <div class="detail-section">
+        <h3>👷 Personnel</h3>
+        <div class="detail-row"><span class="dk">Technician</span><span class="dv">${b.technician}</span></div>
+        <div class="detail-row"><span class="dk">Operator</span><span class="dv">${b.operator || '—'}</span></div>
+      </div>
+      <div class="detail-section">
+        <h3>🔍 Problem & Action</h3>
+        <div class="detail-row"><span class="dk">Problem Description</span><span class="dv">${b.problem}</span></div>
+        <div class="detail-row"><span class="dk">Action Taken</span><span class="dv">${b.action || '—'}</span></div>
+        <div class="detail-row"><span class="dk">Root Cause</span><span class="dv">${b.rootCause || '—'}</span></div>
+        <div class="detail-row"><span class="dk">Spare Parts Used</span>
+          <span class="dv">${b.partsUsed && b.partsUsed.length > 0
+            ? b.partsUsed.map(p => `${p.spareName}${p.specification?' ('+p.specification+')':''} ×${p.qtyUsed}`).join('<br>')
+            : (b.parts || '—')}</span></div>
+        <div class="detail-row"><span class="dk">Remarks</span><span class="dv">${b.remarks || '—'}</span></div>
+      </div>
+      <div class="detail-section">
+        <h3>📋 Problem History</h3>
+        <div style="background:#0f172a;border-radius:8px;padding:10px">${histHTML}</div>
+      </div>
+    `;
+
+    document.getElementById('detailModal').classList.add('show');
+  }
+
+  function closeDetail() {
+    document.getElementById('detailModal').classList.remove('show');
+  }
+
+  function editFromDetail() {
+    closeDetail();
+    openEditModal(detailIdx);
+  }
+
+  // ── STATS ─────────────────────────────────────────────────────
+  function renderStats() {
+    const total    = breakdowns.length;
+    const open     = breakdowns.filter(b => b.status === 'Open').length;
+    const progress = breakdowns.filter(b => b.status === 'In Progress').length;
+    const closed   = breakdowns.filter(b => b.status === 'Closed').length;
+    const avgTTR   = breakdowns.filter(b => b.ttrMins > 0).length > 0
+      ? (breakdowns.filter(b=>b.ttrMins>0).reduce((s,b)=>s+b.ttrMins,0)
+         / breakdowns.filter(b=>b.ttrMins>0).length / 60).toFixed(1)
+      : '—';
+
+    document.getElementById('stats-row').innerHTML = `
+      <div class="mini-stat red">
+        <div class="label">Total Breakdowns</div>
+        <div class="value">${total}</div>
+      </div>
+      <div class="mini-stat red">
+        <div class="label">Open</div>
+        <div class="value">${open}</div>
+      </div>
+      <div class="mini-stat amber">
+        <div class="label">In Progress</div>
+        <div class="value">${progress}</div>
+      </div>
+      <div class="mini-stat green">
+        <div class="label">Closed</div>
+        <div class="value">${closed}</div>
+      </div>
+      <div class="mini-stat blue">
+        <div class="label">Avg Repair Time</div>
+        <div class="value">${avgTTR} <small style="font-size:14px">hrs</small></div>
+      </div>
+    `;
+  }
+
+  // ── TABLE ─────────────────────────────────────────────────────
+  function renderTable() {
+    const search  = document.getElementById('searchInput').value.toLowerCase();
+    const machine = document.getElementById('machineFilter').value;
+    const status  = document.getElementById('statusFilter').value;
+
+    const filtered = breakdowns.filter(b => {
+      const matchSearch =
+        b.ref.toLowerCase().includes(search)       ||
+        b.machine.toLowerCase().includes(search)   ||
+        (b.technician||'').toLowerCase().includes(search) ||
+        (b.operator||'').toLowerCase().includes(search)   ||
+        (b.problem||'').toLowerCase().includes(search);
+      const matchMachine = machine ? b.machine === machine : true;
+      const matchStatus  = status  ? b.status  === status  : true;
+      return matchSearch && matchMachine && matchStatus;
+    });
+
+    const tbody = document.getElementById('bd-tbody');
+    const empty = document.getElementById('empty-state');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    tbody.innerHTML = filtered.map(b => {
+      const realIdx = breakdowns.indexOf(b);
+      const badgeClass = {
+        Open:'badge-open', 'In Progress':'badge-progress', Closed:'badge-closed'
+      }[b.status] || 'badge-open';
+
+      return `
+        <tr>
+          <td>${realIdx + 1}</td>
+          <td><strong>${b.ref}</strong></td>
+          <td><strong>${b.machine}</strong></td>
+          <td>${b.bdDate}</td>
+          <td>${b.startTime || '—'}</td>
+          <td>${b.endTime   || '—'}</td>
+          <td>${buildTTRCell(realIdx, b, 'main')}</td>
+          <td>${b.technician}</td>
+          <td><span class="badge ${badgeClass}">${b.status}</span></td>
+          <td>
+            <button class="btn-sm btn-view"     onclick="viewDetail(${realIdx})">👁 View</button>
+            <button class="btn-sm btn-edit-sm"  onclick="openEditModal(${realIdx})" style="margin-left:5px">✏️</button>
+            <button class="btn-sm btn-del"      onclick="deleteBreakdown(${realIdx})" style="margin-left:5px">🗑</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ── EDITABLE TTR CELL ─────────────────────────────────────────
+  function buildTTRCell(realIdx, b, scope) {
+    const cellId   = `ttr-val-${scope}-${realIdx}`;
+    const inputId  = `ttr-inp-${scope}-${realIdx}`;
+    const wrapId   = `ttr-wrap-${scope}-${realIdx}`;
+    const dispId   = `ttr-disp-${scope}-${realIdx}`;
+    return `
+      <div class="ttr-cell" id="${cellId}">
+        <span class="ttr-value" id="${dispId}">${b.ttrDisplay || '—'}</span>
+        <button class="ttr-edit-btn" title="Edit total time"
+                onclick="startEditTTR(${realIdx},'${scope}')">✏️</button>
+        <div class="ttr-input-wrap" id="${wrapId}">
+          <input class="ttr-input" id="${inputId}" type="text"
+                 placeholder="e.g. 2h 30m" value="${b.ttrDisplay || ''}" />
+          <button class="ttr-save-btn"   onclick="saveTTR(${realIdx},'${scope}')">✔</button>
+          <button class="ttr-cancel-btn" onclick="cancelEditTTR(${realIdx},'${scope}')">✕</button>
+        </div>
+      </div>`;
+  }
+
+  function startEditTTR(idx, scope) {
+    document.getElementById(`ttr-disp-${scope}-${idx}`).style.display = 'none';
+    document.querySelector(`#ttr-val-${scope}-${idx} .ttr-edit-btn`).style.display = 'none';
+    document.getElementById(`ttr-wrap-${scope}-${idx}`).classList.add('show');
+    document.getElementById(`ttr-inp-${scope}-${idx}`).focus();
+  }
+
+  function cancelEditTTR(idx, scope) {
+    document.getElementById(`ttr-disp-${scope}-${idx}`).style.display = '';
+    document.querySelector(`#ttr-val-${scope}-${idx} .ttr-edit-btn`).style.display = '';
+    document.getElementById(`ttr-wrap-${scope}-${idx}`).classList.remove('show');
+  }
+
+  function saveTTR(idx, scope) {
+    const newVal = document.getElementById(`ttr-inp-${scope}-${idx}`).value.trim();
+    if (!newVal) { cancelEditTTR(idx, scope); return; }
+    breakdowns[idx].ttrDisplay = newVal;
+    // Try to parse minutes from "Xh Ym" pattern
+    const match = newVal.match(/(\d+)\s*h\s*(\d+)\s*m/i) ||
+                  newVal.match(/(\d+)\s*h/i);
+    if (match) {
+      const hrs  = parseInt(match[1]) || 0;
+      const mins = parseInt(match[2]) || 0;
+      breakdowns[idx].ttrMins = hrs * 60 + mins;
+    }
+    saveBD(breakdowns);
+    renderStats();
+    renderTable();
+    renderHistory();
+  }
+
+  // ── HISTORY PANEL ─────────────────────────────────────────────
+  function populateHistoryYears() {
+    const years = [...new Set(breakdowns.map(b => b.bdDate ? b.bdDate.substring(0,4) : null)
+                              .filter(Boolean))].sort((a,b) => b-a);
+    const sel = document.getElementById('hist-year');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All Years</option>' +
+      years.map(y => `<option value="${y}" ${y===cur?'selected':''}>${y}</option>`).join('');
+  }
+
+  function populateHistoryMachineFilter() {
+    const sel = document.getElementById('hist-machine');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All Machines</option>' +
+      machines.map(m => `<option value="${m.id}" ${m.id===cur?'selected':''}>${m.id} — ${m.name}</option>`).join('');
+  }
+
+  function renderHistory() {
+    populateHistoryYears();
+    populateHistoryMachineFilter();
+
+    const search   = (document.getElementById('hist-search').value || '').toLowerCase();
+    const selYear  = document.getElementById('hist-year').value;
+    const selMonth = document.getElementById('hist-month').value;
+    const selMach  = document.getElementById('hist-machine').value;
+
+    // Filter breakdowns
+    const filtered = breakdowns.filter((b, idx) => {
+      const yr  = b.bdDate ? b.bdDate.substring(0,4) : '';
+      const mo  = b.bdDate ? b.bdDate.substring(5,7) : '';
+      const matchYear  = selYear  ? yr === selYear  : true;
+      const matchMonth = selMonth ? mo === selMonth : true;
+      const matchMach  = selMach  ? b.machine === selMach : true;
+      const matchSearch = search
+        ? (b.machine||'').toLowerCase().includes(search)    ||
+          (b.ref||'').toLowerCase().includes(search)        ||
+          (b.technician||'').toLowerCase().includes(search) ||
+          (b.problem||'').toLowerCase().includes(search)    ||
+          (b.action||'').toLowerCase().includes(search)
+        : true;
+      return matchYear && matchMonth && matchMach && matchSearch;
+    });
+
+    const body = document.getElementById('history-panel-body');
+
+    if (filtered.length === 0) {
+      body.innerHTML = '<div class="hist-no-data">📭 No breakdown records match the selected filters.</div>';
+      return;
+    }
+
+    // Group by machine
+    const groups = {};
+    filtered.forEach(b => {
+      if (!groups[b.machine]) groups[b.machine] = [];
+      groups[b.machine].push(b);
+    });
+
+    const MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun',
+                         'Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    body.innerHTML = Object.keys(groups).sort().map(machId => {
+      const rows = groups[machId].sort((a,b) => b.bdDate.localeCompare(a.bdDate));
+      const macObj = machines.find(m => m.id === machId);
+      const macName = macObj ? macObj.name : machId;
+      const totalTTR = rows.reduce((s,b) => s + (b.ttrMins || 0), 0);
+      const ttrLabel = totalTTR > 0
+        ? `${Math.floor(totalTTR/60)}h ${totalTTR%60}m total downtime`
+        : `${rows.length} record${rows.length>1?'s':''}`;
+
+      const rowsHTML = rows.map((b, ri) => {
+        const realIdx = breakdowns.indexOf(b);
+        const yr  = b.bdDate ? b.bdDate.substring(0,4) : '';
+        const mo  = b.bdDate ? parseInt(b.bdDate.substring(5,7)) : 0;
+        const badgeClass = {
+          Open:'badge-open', 'In Progress':'badge-progress', Closed:'badge-closed'
+        }[b.status] || 'badge-open';
+
+        return `<tr>
+          <td><strong>${b.ref}</strong></td>
+          <td style="color:#94a3b8">${MONTH_NAMES[mo] || '—'} ${yr}</td>
+          <td>${b.bdDate}</td>
+          <td>${b.startTime||'—'}</td>
+          <td>${buildTTRCell(realIdx, b, 'hist')}</td>
+          <td>${b.technician}</td>
+          <td style="color:#cbd5e1;max-width:200px">${b.problem ? b.problem.substring(0,80)+(b.problem.length>80?'…':'') : '—'}</td>
+          <td><span class="badge ${badgeClass}">${b.status}</span></td>
+          <td>
+            <button class="btn-sm btn-view" onclick="viewDetail(${realIdx})">👁</button>
+            <button class="btn-sm btn-edit-sm" onclick="openEditModal(${realIdx})" style="margin-left:4px">✏️</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      const blockId = 'mhb-' + machId.replace(/\s/g,'_');
+      return `
+        <div class="machine-history-block">
+          <div class="machine-history-title" onclick="toggleMachineBlock('${blockId}')">
+            <div class="mht-left">
+              🏭 <span>${machId}${macName !== machId ? ' — ' + macName : ''}</span>
+              <span style="background:#334155;color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:12px;font-weight:500">
+                ${rows.length} breakdown${rows.length>1?'s':''}
+              </span>
+            </div>
+            <div class="mht-right">
+              <span style="color:#4ade80">${ttrLabel}</span>
+              <span class="mht-toggle open" id="${blockId}-toggle">▲</span>
+            </div>
+          </div>
+          <div class="machine-history-rows open" id="${blockId}">
+            <table class="hist-table">
+              <thead>
+                <tr>
+                  <th>BD Ref</th>
+                  <th>Month / Year</th>
+                  <th>Breakdown Date</th>
+                  <th>Start Time</th>
+                  <th>Total Time</th>
+                  <th>Technician</th>
+                  <th>Problem</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHTML}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleMachineBlock(blockId) {
+    const block   = document.getElementById(blockId);
+    const toggle  = document.getElementById(blockId + '-toggle');
+    const isOpen  = block.classList.contains('open');
+    block.classList.toggle('open', !isOpen);
+    toggle.classList.toggle('open', !isOpen);
+    toggle.textContent = isOpen ? '▼' : '▲';
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // 🧪  TEST DATA GENERATOR
+  // ══════════════════════════════════════════════════════════════
+
+  function showTestPanel() {
+    const p = document.getElementById('test-panel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('test-log').style.display = 'none';
+  }
+
+  function clearTestData() {
+    if (!confirm('⚠️ This will DELETE all breakdown records. Continue?')) return;
+    breakdowns = [];
+    saveBD(breakdowns);
+    renderStats();
+    renderTable();
+    renderHistory();
+    log('🗑 All breakdown data cleared.');
+  }
+
+  function log(msg) {
+    const el = document.getElementById('test-log');
+    el.style.display = 'block';
+    el.innerHTML += msg + '<br>';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function generateTestData() {
+    const startYear = parseInt(document.getElementById('td-start-year').value);
+    const endYear   = parseInt(document.getElementById('td-end-year').value);
+    if (startYear > endYear) { alert('Start year must be ≤ end year.'); return; }
+
+    // Reload fresh machines list
+    machines = loadMachines();
+    if (machines.length === 0) {
+      alert('⚠️ No machines found. Please add machines first in the Machines page, then run the test generator.');
+      return;
+    }
+
+    document.getElementById('test-log').innerHTML = '';
+    log(`⚡ Generating test data for ${startYear}–${endYear} across ${machines.length} machine(s)…`);
+    log('─'.repeat(60));
+
+    const TECHNICIANS = ['Rajesh Kumar','Suresh Patil','Amit Sharma','Vijay More','Dinesh Yadav'];
+    const OPERATORS   = ['Ramesh Gaikwad','Sunil Thakur','Mohan Singh','Raju Verma','Prakash Joshi'];
+    const PROBLEMS    = [
+      'Motor bearing overheating and noise',
+      'V-Belt broken — machine stopped',
+      'Hydraulic oil leakage from main cylinder',
+      'Electrical panel — phase failure trip',
+      'Conveyor chain snapped',
+      'Coolant pump failure — no flow',
+      'Spindle vibration — runout detected',
+      'PLC fault — E-stop not releasing',
+      'Gearbox oil seal failure — leakage',
+      'Pneumatic cylinder rod bent',
+      'Overload relay tripped — motor burnt smell',
+      'Sensor failure — proximity switch not detecting',
+      'Hydraulic pressure drop below setpoint',
+      'Chuck jaw worn — poor grip',
+      'Coolant contamination — change required',
+    ];
+    const ACTIONS = [
+      'Replaced bearing, re-lubricated shaft',
+      'Replaced V-belt, checked alignment',
+      'Replaced hydraulic seal, refilled oil',
+      'Reset phase failure relay, checked wiring',
+      'Replaced conveyor chain links, re-tensioned',
+      'Replaced coolant pump impeller',
+      'Trued spindle, replaced worn collet',
+      'Reset PLC, re-downloaded program',
+      'Replaced oil seal, refilled gearbox oil',
+      'Replaced pneumatic cylinder rod assembly',
+      'Replaced overload relay, checked motor insulation',
+      'Replaced proximity sensor, re-calibrated',
+      'Replaced hydraulic pump, pressure tested',
+      'Replaced chuck jaws, re-calibrated',
+      'Drained and refilled coolant tank',
+    ];
+    const ROOT_CAUSES = [
+      'Lack of lubrication','Normal wear and tear','Overload','Electrical fault',
+      'Improper tensioning','Contamination','Operator error','Fatigue failure',
+      'Material defect','Misalignment','Vibration fatigue','Age related deterioration',
+    ];
+    const PARTS = [
+      'Bearing 6205 2RS','V-Belt A52','Hydraulic Seal Kit 40mm','Phase Failure Relay',
+      'Chain Link 1/2" × 10','Pump Impeller 75mm','Collet ER32','PLC I/O Module',
+      'Oil Seal 30×52×10','Cylinder Rod Ø25','Overload Relay 10A','Prox Sensor NPN',
+      'Hydraulic Pump Gear Type','Chuck Jaw Set (3pc)','Coolant Concentrate 20L',
+    ];
+
+    // ── seeded pseudo-random (deterministic so results are reproducible) ──
+    let seed = 42;
+    function rng() {
+      seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+      return (seed >>> 0) / 0xffffffff;
+    }
+    function rInt(min, max)    { return min + Math.floor(rng() * (max - min + 1)); }
+    function rPick(arr)        { return arr[rInt(0, arr.length - 1)]; }
+    function zeroPad(n)        { return String(n).padStart(2, '0'); }
+
+    // Max breakdowns per machine per month — ensure DIFFERENT counts per machine
+    // Use a different offset per machine so counts never all match
+    function bdCountForMachine(machIdx, year, month) {
+      // Each machine gets its own pseudo-random stream per year+month
+      const mix = ((machIdx + 1) * 31 + (year - startYear) * 7 + month * 13) % 11;
+      return (mix % 5) + 1;   // 1–5, different for each machine
+    }
+
+    // Downtime pools (minutes) — varied bands per machine
+    const DT_BANDS = [
+      [20, 90],   // machine 0 — short repairs
+      [45, 180],  // machine 1 — medium
+      [30, 240],  // machine 2 — sometimes long
+      [60, 300],  // machine 3 — heavy machinery
+      [15, 120],  // machine 4 — quick fixes
+      [90, 420],  // machine 5 — complex equipment
+      [25, 150],  // machine 6
+      [50, 200],  // machine 7
+    ];
+
+    let newBDs = [];
+    let totalGenerated = 0;
+
+    for (let year = startYear; year <= endYear; year++) {
+      for (let month = 1; month <= 12; month++) {
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        machines.forEach((mac, mi) => {
+          const count = bdCountForMachine(mi, year, month);
+          const band  = DT_BANDS[mi % DT_BANDS.length];
+
+          // Spread breakdowns evenly across the month
+          const usedDays = new Set();
+          for (let bi = 0; bi < count; bi++) {
+            // Pick a unique day
+            let day;
+            let attempts = 0;
+            do {
+              day = rInt(1, daysInMonth);
+              attempts++;
+            } while (usedDays.has(day) && attempts < 20);
+            usedDays.add(day);
+
+            const bdDateStr = `${year}-${zeroPad(month)}-${zeroPad(day)}`;
+
+            // Breakdown start time: between 06:00 and 22:00
+            const startHr  = rInt(6, 21);
+            const startMin = rInt(0, 59);
+
+            // TTR: varied, machine-specific band, also varies per breakdown
+            // Different breakdowns in same month have different downtimes
+            const baseTTR = band[0] + Math.floor(rng() * (band[1] - band[0]));
+            // Add bi-based offset so each BD in same machine/month differs
+            const ttrMins = Math.max(10, baseTTR + (bi * rInt(5, 30)));
+
+            // End datetime
+            const startDt = new Date(`${bdDateStr}T${zeroPad(startHr)}:${zeroPad(startMin)}`);
+            const endDt   = new Date(startDt.getTime() + ttrMins * 60000);
+
+            const endDateStr = endDt.toISOString().split('T')[0];
+            const endHr      = endDt.getHours();
+            const endMin     = endDt.getMinutes();
+
+            const hrs     = Math.floor(ttrMins / 60);
+            const mins    = ttrMins % 60;
+            const ttrDisp = `${hrs}h ${mins}m  (${(ttrMins/60).toFixed(2)} hours)`;
+
+            const probIdx = rInt(0, PROBLEMS.length - 1);
+            const status  = ttrMins > 0 ? rPick(['Closed','Closed','Closed','In Progress']) : 'Open';
+
+            newBDs.push({
+              ref:       `BD-T${year}${zeroPad(month)}${zeroPad(day)}-${mac.id}-${bi+1}`,
+              machine:   mac.id,
+              status,
+              bdDate:    bdDateStr,
+              startTime: `${zeroPad(startHr)}:${zeroPad(startMin)}`,
+              endDate:   endDateStr,
+              endTime:   `${zeroPad(endHr)}:${zeroPad(endMin)}`,
+              ttrMins,
+              ttrDisplay: ttrDisp,
+              technician: rPick(TECHNICIANS),
+              operator:   rPick(OPERATORS),
+              problem:    PROBLEMS[probIdx],
+              action:     ACTIONS[probIdx],
+              rootCause:  rPick(ROOT_CAUSES),
+              parts:      rPick(PARTS),
+              remarks:    '',
+              history:    [],
+              createdAt:  new Date(`${bdDateStr}T${zeroPad(startHr)}:${zeroPad(startMin)}`).toISOString(),
+            });
+            totalGenerated++;
+          }
+        });
+      }
+      log(`✅ Year ${year} — generated for all ${machines.length} machine(s) × 12 months`);
+    }
+
+    // Append (don't wipe existing real data unless user clicked Clear first)
+    breakdowns = [...breakdowns, ...newBDs];
+    saveBD(breakdowns);
+
+    log('─'.repeat(60));
+    log(`🎉 Done! <strong style="color:#4ade80">${totalGenerated} test breakdowns</strong> added.`);
+    log(`📊 Total records now: <strong style="color:#38bdf8">${breakdowns.length}</strong>`);
+    log(`ℹ️ Go to <a href="kpi.html" style="color:#38bdf8">KPI page</a> and hit Calculate to verify MTTR/MTBF.`);
+    log(`ℹ️ Click <strong style="color:#c084fc">🗑 Clear All Data</strong> to remove test data when done.`);
+
+    populateMachineDropdowns();
+    renderStats();
+    renderTable();
+    renderHistory();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  document.getElementById('bdModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.getElementById('detailModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDetail();
+  });
+
+  // ── CLOCK ─────────────────────────────────────────────────────
+  function updateClock() {
+    document.getElementById('live-clock').textContent =
+      new Date().toLocaleString('en-GB', {
+        weekday:'short', year:'numeric', month:'short',
+        day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'
+      });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── INIT ──────────────────────────────────────────────────────
+  populateMachineDropdowns();
+  renderStats();
+  renderTable();
+  renderHistory();
+
+  // Ensure copy-paste works in all textareas and text inputs
+  document.querySelectorAll('textarea, input[type="text"]').forEach(function(el) {
+    el.addEventListener('paste', function(e) { e.stopPropagation(); });
+    el.addEventListener('copy',  function(e) { e.stopPropagation(); });
+    el.addEventListener('cut',   function(e) { e.stopPropagation(); });
+  });
+</script>
+
+</body>
+</html>

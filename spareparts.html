@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spare Parts — Maintenance Management System</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;}
+    .navbar{background:#1e293b;border-bottom:1px solid #334155;padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    .navbar .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;color:#38bdf8;text-decoration:none;}
+    .navbar .nav-right{display:flex;align-items:center;gap:16px;font-size:14px;color:#94a3b8;}
+    .date-time{background:#0f172a;padding:6px 14px;border-radius:6px;font-size:13px;}
+    .layout{display:flex;height:calc(100vh - 60px);}
+    .sidebar{width:240px;background:#1e293b;border-right:1px solid #334155;padding:24px 0;display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
+    .sidebar .section-label{font-size:11px;text-transform:uppercase;color:#475569;letter-spacing:1px;padding:8px 20px 4px;margin-top:8px;}
+    .sidebar a{display:flex;align-items:center;gap:12px;padding:10px 20px;color:#94a3b8;text-decoration:none;font-size:14px;border-left:3px solid transparent;transition:all 0.2s;}
+    .sidebar a:hover{background:#0f172a;color:#e2e8f0;border-left-color:#38bdf8;}
+    .sidebar a.active{background:#0f172a;color:#38bdf8;border-left-color:#38bdf8;font-weight:600;}
+    .sidebar a .nav-icon{font-size:18px;width:22px;text-align:center;}
+    .main{flex:1;overflow-y:auto;padding:32px;}
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+    .page-header h1{font-size:24px;font-weight:700;color:#f1f5f9;}
+    .page-header p{font-size:14px;color:#64748b;margin-top:4px;}
+    .header-btns{display:flex;gap:10px;flex-wrap:wrap;}
+    .btn{padding:9px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;display:inline-flex;align-items:center;gap:7px;}
+    .btn-primary{background:#0284c7;color:#fff;} .btn-primary:hover{background:#0369a1;}
+    .btn-green{background:#15803d;color:#fff;} .btn-green:hover{background:#166534;}
+    .btn-sm{padding:5px 11px;font-size:12px;border-radius:6px;cursor:pointer;border:none;font-weight:600;}
+    .btn-edit{background:#334155;color:#cbd5e1;} .btn-edit:hover{background:#475569;}
+    .btn-del{background:#7f1d1d;color:#fca5a5;} .btn-del:hover{background:#991b1b;}
+    .btn-view{background:#1e3a5f;color:#7dd3fc;} .btn-view:hover{background:#1e40af;}
+    .btn-cancel{background:#334155;color:#cbd5e1;padding:9px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;}
+    .btn-cancel:hover{background:#475569;}
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;}
+    .mini-stat{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px 20px;}
+    .mini-stat .label{font-size:12px;color:#64748b;margin-bottom:6px;}
+    .mini-stat .value{font-size:22px;font-weight:700;color:#f1f5f9;}
+    .mini-stat.red{border-top:3px solid #f87171;} .mini-stat.amber{border-top:3px solid #fbbf24;}
+    .mini-stat.green{border-top:3px solid #4ade80;} .mini-stat.blue{border-top:3px solid #38bdf8;}
+    .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+    .search-box{flex:1;min-width:200px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:9px 16px;color:#e2e8f0;font-size:14px;}
+    .search-box:focus{outline:none;border-color:#38bdf8;}
+    .search-box::placeholder{color:#475569;}
+    select.filter{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:9px 14px;color:#e2e8f0;font-size:14px;cursor:pointer;}
+    select.filter:focus{outline:none;border-color:#38bdf8;}
+    .table-wrap{background:#1e293b;border:1px solid #334155;border-radius:12px;overflow:hidden;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    thead tr{background:#0f172a;}
+    thead th{padding:12px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;border-bottom:1px solid #334155;}
+    tbody tr{border-bottom:1px solid #1e3a5f22;transition:background 0.15s;}
+    tbody tr:hover{background:#0f172a88;}
+    tbody tr.row-out{background:#7f1d1d18;}
+    tbody tr.row-low{background:#78350f15;}
+    tbody tr:last-child{border-bottom:none;}
+    td{padding:11px 14px;color:#cbd5e1;vertical-align:middle;}
+    td strong{color:#f1f5f9;font-weight:600;}
+    .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+    .badge-ok{background:#14532d;color:#4ade80;}
+    .badge-low{background:#78350f;color:#fcd34d;}
+    .badge-out{background:#7f1d1d;color:#fca5a5;}
+    .qty-ok{color:#4ade80;font-weight:700;font-size:15px;}
+    .qty-low{color:#fbbf24;font-weight:700;font-size:15px;}
+    .qty-out{color:#f87171;font-weight:700;font-size:15px;}
+    .empty-state{text-align:center;padding:56px;color:#475569;}
+    .empty-state .ei{font-size:48px;margin-bottom:12px;}
+    /* MODAL */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:200;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;}
+    .modal-overlay.show{display:flex;}
+    .modal{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:30px;width:100%;max-width:760px;box-shadow:0 24px 64px rgba(0,0,0,0.6);margin:auto;}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+    .modal-header h2{font-size:19px;font-weight:700;color:#f1f5f9;}
+    .modal-close{background:#334155;border:none;color:#94a3b8;width:32px;height:32px;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .modal-close:hover{background:#475569;color:#fff;}
+    .form-section{margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid #334155;}
+    .form-section:last-of-type{border-bottom:none;margin-bottom:0;}
+    .form-section-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#38bdf8;font-weight:700;margin-bottom:13px;}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+    .form-group{display:flex;flex-direction:column;gap:5px;}
+    .form-group.full{grid-column:1/-1;}
+    .form-group label{font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;}
+    .form-group input,.form-group select,.form-group textarea{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:14px;font-family:inherit;transition:border-color 0.2s;}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#38bdf8;}
+    .stock-status-badge{padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-top:4px;display:inline-block;}
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #334155;}
+    /* DETAIL MODAL */
+    .detail-modal{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:30px;width:100%;max-width:680px;box-shadow:0 24px 64px rgba(0,0,0,0.6);margin:auto;}
+    .detail-section{margin-bottom:18px;}
+    .detail-section h3{font-size:12px;text-transform:uppercase;color:#38bdf8;letter-spacing:1px;margin-bottom:9px;}
+    .detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #0f172a;font-size:14px;}
+    .detail-row:last-child{border-bottom:none;}
+    .detail-row .dk{color:#64748b;} .detail-row .dv{color:#e2e8f0;font-weight:500;text-align:right;max-width:60%;}
+    .mvt-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+    .mvt-table th{background:#0f172a;padding:7px 10px;text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;border-bottom:1px solid #334155;}
+    .mvt-table td{padding:7px 10px;border-bottom:1px solid #1e293b;color:#94a3b8;}
+    .mvt-table tbody tr:last-child td{border-bottom:none;}
+    /* ADJUST STOCK */
+    .adjust-wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+    .adjust-wrap input{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:7px 10px;color:#e2e8f0;font-size:14px;width:80px;}
+    .adjust-wrap input:focus{outline:none;border-color:#38bdf8;}
+    .adjust-wrap select{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:7px 10px;color:#e2e8f0;font-size:13px;}
+    .btn-adj-add{background:#15803d;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+    .btn-adj-add:hover{background:#166534;}
+    .btn-adj-rem{background:#7f1d1d;color:#fca5a5;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+    .btn-adj-rem:hover{background:#991b1b;}
+    @media(max-width:768px){.sidebar{display:none;}.form-grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="logo">⚙️ Maintenance Management System</a>
+  <div class="nav-right"><span id="live-clock" class="date-time"></span><span>👤 Engineer</span></div>
+</nav>
+<div class="layout">
+  <aside class="sidebar">
+    <span class="section-label">Main</span>
+    <a href="index.html"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="machines.html"><span class="nav-icon">🏭</span> Machines</a>
+    <span class="section-label">Operations</span>
+    <a href="breakdowns.html"><span class="nav-icon">🔴</span> Breakdowns</a>
+    <span class="section-label">Inventory</span>
+    <a href="spareparts.html" class="active"><span class="nav-icon">📦</span> Spare Parts</a>
+    <span class="section-label">Analytics</span>
+    <a href="kpi.html"><span class="nav-icon">📊</span> KPI (MTTR/MTBF)</a>
+    <a href="reports.html"><span class="nav-icon">📄</span> Monthly Reports</a>
+    <span class="section-label">Files</span>
+    <a href="documents.html"><span class="nav-icon">📁</span> Documents</a>
+  </aside>
+  <main class="main">
+    <div class="page-header">
+      <div><h1>📦 Spare Parts Inventory</h1><p>Manage stock, track usage and get low-stock alerts</p></div>
+      <div class="header-btns">
+        <button class="btn btn-green" onclick="document.getElementById('xl-import').click()">📥 Import Excel</button>
+        <input type="file" id="xl-import" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)"/>
+        <button class="btn btn-primary" onclick="openAddModal()">＋ Add Spare Part</button>
+      </div>
+    </div>
+    <div class="stats-row" id="stats-row"></div>
+    <div class="toolbar">
+      <input class="search-box" type="text" id="searchInput" placeholder="🔍  Search name, spec, machine, supplier…" oninput="renderTable()"/>
+      <select class="filter" id="machineFilter" onchange="renderTable()"><option value="">All Machines</option></select>
+      <select class="filter" id="statusFilter" onchange="renderTable()">
+        <option value="">All Status</option>
+        <option value="out">Out of Stock</option>
+        <option value="low">Low Stock</option>
+        <option value="ok">OK</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Part ID</th><th>Machine</th><th>Spare Name</th>
+          <th>Specification</th><th>Condition</th><th>Unit Price</th>
+          <th>Qty in Stock</th><th>Min Stock</th><th>Supplier</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="sp-tbody"></tbody>
+      </table>
+      <div id="empty-state" class="empty-state" style="display:none">
+        <div class="ei">📦</div>
+        <div>No spare parts added yet. Click "+ Add Spare Part" or import from Excel.</div>
+      </div>
+    </div>
+  </main>
+</div>
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="spModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">📦 Add Spare Part</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">🏭 Machine & Location</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Machine</label><select id="f-machine"><option value="">— Select —</option></select></div>
+        <div class="form-group"><label>Storage Location</label><input type="text" id="f-storage" placeholder="e.g. MT-01"/></div>
+        <div class="form-group"><label>Compartment</label><input type="text" id="f-compartment" placeholder="e.g. C-04"/></div>
+        <div class="form-group"><label>Supplier</label><input type="text" id="f-supplier" placeholder="Supplier name"/></div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">🔩 Part Details</div>
+      <div class="form-grid">
+        <div class="form-group full"><label>Spare Name / Description *</label><input type="text" id="f-name" placeholder="e.g. Z axis servo motor"/></div>
+        <div class="form-group full"><label>Specification</label><input type="text" id="f-spec" placeholder="e.g. 7.5KW -17A, 6003-2RS1 SKF…"/></div>
+        <div class="form-group"><label>Condition</label>
+          <select id="f-condition"><option value="New">New</option><option value="Used">Used</option><option value="Repaired">Repaired</option></select>
+        </div>
+        <div class="form-group"><label>Unit Price (₹)</label><input type="number" id="f-price" min="0" placeholder="0"/></div>
+        <div class="form-group"><label>Lead Time</label><input type="text" id="f-lead" placeholder="e.g. 01 Week"/></div>
+        <div class="form-group"><label>Discontinued?</label>
+          <select id="f-discontinued"><option value="no">No</option><option value="yes">Yes</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">📊 Stock Information</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Quantity in Stock *</label><input type="number" id="f-qty" min="0" value="0" oninput="updateStockIndicator()"/></div>
+        <div class="form-group"><label>Min. Stock Required *</label><input type="number" id="f-minqty" min="0" value="1" oninput="updateStockIndicator()"/></div>
+        <div class="form-group full">
+          <label>Stock Status</label>
+          <div id="f-stock-indicator" class="stock-status-badge" style="background:#334155;color:#94a3b8">Enter quantity above</div>
+        </div>
+        <div class="form-group full"><label>Notes / Use Date</label><input type="text" id="f-notes" placeholder="Additional notes…"/></div>
+      </div>
+    </div>
+    <div class="form-section" id="adjust-section" style="display:none">
+      <div class="form-section-title">🔄 Adjust Stock</div>
+      <div class="adjust-wrap">
+        <select id="adj-type"><option value="add">➕ Add Stock</option><option value="deduct">➖ Deduct Stock</option></select>
+        <input type="number" id="adj-qty" min="1" value="1" placeholder="Qty"/>
+        <input type="text" id="adj-reason" placeholder="Reason / Reference" style="flex:1;min-width:140px"/>
+        <button class="btn-adj-add" onclick="adjustStock()">Apply</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePart()">💾 Save Part</button>
+    </div>
+  </div>
+</div>
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="detail-modal">
+    <div class="modal-header">
+      <h2 id="d-title">Part Detail</h2>
+      <button class="modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="detail-content"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDetail()">Close</button>
+      <button class="btn btn-edit btn-sm" style="padding:9px 18px;font-size:14px" onclick="editFromDetail()">✏️ Edit</button>
+    </div>
+  </div>
+</div>
+<script>
+const SP_KEY  = 'mms_spares';
+const MAC_KEY = 'mms_machines';
+function loadSpares()   { return JSON.parse(localStorage.getItem(SP_KEY)  || '[]'); }
+function saveSpares(d)  { localStorage.setItem(SP_KEY, JSON.stringify(d)); }
+function loadMachines() { return JSON.parse(localStorage.getItem(MAC_KEY) || '[]'); }
+
+let spares    = loadSpares();
+let machines  = loadMachines();
+let editIndex = null;
+let detailIdx = null;
+
+function stockStatus(sp) {
+  if (sp.qtyInStock <= 0)                         return 'out';
+  if (sp.qtyInStock <= sp.minStockReq)            return 'low';
+  return 'ok';
+}
+
+// ── MACHINE DROPDOWN ─────────────────────────────────────────────
+function populateMachineDropdowns() {
+  const opts = machines.map(m => `<option value="${m.id}">${m.id} — ${m.name}</option>`).join('');
+  document.getElementById('f-machine').innerHTML    = '<option value="">— Select —</option>' + opts;
+  document.getElementById('machineFilter').innerHTML= '<option value="">All Machines</option>' +
+    machines.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
+}
+
+// ── STOCK INDICATOR ───────────────────────────────────────────────
+function updateStockIndicator() {
+  const qty    = parseInt(document.getElementById('f-qty').value)    || 0;
+  const minQty = parseInt(document.getElementById('f-minqty').value) || 1;
+  const el     = document.getElementById('f-stock-indicator');
+  if (qty <= 0)          { el.style.cssText='background:#7f1d1d;color:#fca5a5;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-top:4px;display:inline-block'; el.textContent='🔴 OUT OF STOCK'; }
+  else if (qty <= minQty){ el.style.cssText='background:#78350f;color:#fcd34d;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-top:4px;display:inline-block'; el.textContent='⚠️ LOW STOCK — ' + qty + ' remaining'; }
+  else                   { el.style.cssText='background:#14532d;color:#4ade80;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;margin-top:4px;display:inline-block'; el.textContent='✅ OK — ' + qty + ' in stock'; }
+}
+
+// ── STATS ────────────────────────────────────────────────────────
+function renderStats() {
+  const total   = spares.length;
+  const out     = spares.filter(s => s.qtyInStock <= 0).length;
+  const low     = spares.filter(s => s.qtyInStock > 0 && s.qtyInStock <= s.minStockReq).length;
+  const totalQty= spares.reduce((a,s) => a + (s.qtyInStock||0), 0);
+  document.getElementById('stats-row').innerHTML = `
+    <div class="mini-stat blue"><div class="label">Total Part Types</div><div class="value">${total}</div></div>
+    <div class="mini-stat red"><div class="label">Out of Stock</div><div class="value">${out}</div></div>
+    <div class="mini-stat amber"><div class="label">Low Stock</div><div class="value">${low}</div></div>
+    <div class="mini-stat green"><div class="label">Total Items in Stock</div><div class="value">${totalQty}</div></div>`;
+}
+
+// ── TABLE ────────────────────────────────────────────────────────
+function renderTable() {
+  const search  = document.getElementById('searchInput').value.toLowerCase();
+  const machine = document.getElementById('machineFilter').value;
+  const status  = document.getElementById('statusFilter').value;
+
+  const filtered = spares.filter(s => {
+    const st = stockStatus(s);
+    const ms = search ? (
+      (s.spareName||'').toLowerCase().includes(search)||
+      (s.specification||'').toLowerCase().includes(search)||
+      (s.machine||'').toLowerCase().includes(search)||
+      (s.supplier||'').toLowerCase().includes(search)||
+      (s.id||'').toLowerCase().includes(search)
+    ) : true;
+    const mm = machine ? s.machine === machine : true;
+    const ss = status  ? st === status : true;
+    return ms && mm && ss;
+  });
+
+  const tbody = document.getElementById('sp-tbody');
+  const empty = document.getElementById('empty-state');
+  if (filtered.length === 0) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map(s => {
+    const ri   = spares.indexOf(s);
+    const st   = stockStatus(s);
+    const rowC = st==='out'?'row-out':st==='low'?'row-low':'';
+    const bdgC = st==='out'?'badge-out':st==='low'?'badge-low':'badge-ok';
+    const bdgT = st==='out'?'OUT OF STOCK':st==='low'?'LOW STOCK':'OK';
+    const qtyC = st==='out'?'qty-out':st==='low'?'qty-low':'qty-ok';
+    const price= s.unitPrice ? '₹'+Number(s.unitPrice).toLocaleString('en-IN') : '—';
+    return `<tr class="${rowC}">
+      <td>${ri+1}</td>
+      <td><strong>${s.id}</strong></td>
+      <td>${s.machine||'—'}</td>
+      <td><strong>${s.spareName}</strong></td>
+      <td style="color:#94a3b8">${s.specification||'—'}</td>
+      <td>${s.newUsedRepaired||'—'}</td>
+      <td>${price}</td>
+      <td class="${qtyC}">${s.qtyInStock}</td>
+      <td style="color:#64748b">${s.minStockReq}</td>
+      <td style="color:#94a3b8">${s.supplier||'—'}</td>
+      <td><span class="badge ${bdgC}">${bdgT}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm btn-view" onclick="viewDetail(${ri})">👁</button>
+        <button class="btn-sm btn-edit" onclick="openEditModal(${ri})" style="margin-left:4px">✏️</button>
+        <button class="btn-sm btn-del"  onclick="deletePart(${ri})"   style="margin-left:4px">🗑</button>
+      </td></tr>`;
+  }).join('');
+}
+</script>
+<script>
+// ── OPEN / CLOSE MODALS ──────────────────────────────────────────
+function openAddModal() {
+  editIndex = null;
+  document.getElementById('modal-title').textContent = '📦 Add Spare Part';
+  document.getElementById('adjust-section').style.display = 'none';
+  ['f-machine','f-storage','f-compartment','f-supplier','f-name','f-spec','f-lead','f-notes'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('f-condition').value    = 'New';
+  document.getElementById('f-discontinued').value = 'no';
+  document.getElementById('f-price').value        = '';
+  document.getElementById('f-qty').value          = '0';
+  document.getElementById('f-minqty').value       = '1';
+  updateStockIndicator();
+  document.getElementById('spModal').classList.add('show');
+}
+
+function openEditModal(idx) {
+  editIndex = idx;
+  const s   = spares[idx];
+  document.getElementById('modal-title').textContent = '✏️ Edit — ' + s.spareName;
+  document.getElementById('adjust-section').style.display = 'block';
+  document.getElementById('f-machine').value     = s.machine||'';
+  document.getElementById('f-storage').value     = s.storageLocation||'';
+  document.getElementById('f-compartment').value = s.compartment||'';
+  document.getElementById('f-supplier').value    = s.supplier||'';
+  document.getElementById('f-name').value        = s.spareName||'';
+  document.getElementById('f-spec').value        = s.specification||'';
+  document.getElementById('f-condition').value   = s.newUsedRepaired||'New';
+  document.getElementById('f-price').value       = s.unitPrice||'';
+  document.getElementById('f-lead').value        = s.leadTime||'';
+  document.getElementById('f-discontinued').value= s.discontinued?'yes':'no';
+  document.getElementById('f-notes').value       = s.notes||'';
+  document.getElementById('f-qty').value         = s.qtyInStock||0;
+  document.getElementById('f-minqty').value      = s.minStockReq||1;
+  document.getElementById('adj-type').value      = 'add';
+  document.getElementById('adj-qty').value       = '1';
+  document.getElementById('adj-reason').value    = '';
+  updateStockIndicator();
+  document.getElementById('spModal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('spModal').classList.remove('show'); }
+
+// ── SAVE PART ────────────────────────────────────────────────────
+function savePart() {
+  const name = document.getElementById('f-name').value.trim();
+  const qty  = parseInt(document.getElementById('f-qty').value) || 0;
+  const min  = parseInt(document.getElementById('f-minqty').value) || 1;
+  if (!name) { alert('Please enter Spare Name.'); return; }
+
+  const entry = {
+    id:             editIndex === null ? 'SP-' + String(Date.now()).slice(-6) : spares[editIndex].id,
+    machine:        document.getElementById('f-machine').value,
+    storageLocation:document.getElementById('f-storage').value.trim(),
+    compartment:    document.getElementById('f-compartment').value.trim(),
+    spareName:      name,
+    specification:  document.getElementById('f-spec').value.trim(),
+    newUsedRepaired:document.getElementById('f-condition').value,
+    unitPrice:      document.getElementById('f-price').value,
+    qtyInStock:     qty,
+    minStockReq:    min,
+    leadTime:       document.getElementById('f-lead').value.trim(),
+    supplier:       document.getElementById('f-supplier').value.trim(),
+    discontinued:   document.getElementById('f-discontinued').value === 'yes',
+    notes:          document.getElementById('f-notes').value.trim(),
+    movements:      editIndex === null ? [] : spares[editIndex].movements || [],
+    createdAt:      editIndex === null ? new Date().toISOString() : spares[editIndex].createdAt,
+  };
+
+  if (editIndex === null) spares.push(entry);
+  else spares[editIndex] = entry;
+
+  saveSpares(spares);
+  closeModal();
+  renderStats();
+  renderTable();
+}
+
+// ── ADJUST STOCK ─────────────────────────────────────────────────
+function adjustStock() {
+  if (editIndex === null) return;
+  const type   = document.getElementById('adj-type').value;
+  const qty    = parseInt(document.getElementById('adj-qty').value) || 0;
+  const reason = document.getElementById('adj-reason').value.trim() || '—';
+  if (qty <= 0) { alert('Enter a valid quantity.'); return; }
+
+  const s = spares[editIndex];
+  if (type === 'deduct') {
+    if (s.qtyInStock <= 0)        { alert('❌ Stock is already 0. Cannot deduct.'); return; }
+    if (qty > s.qtyInStock)       { alert('❌ Only ' + s.qtyInStock + ' in stock. Cannot deduct ' + qty + '.'); return; }
+    s.qtyInStock -= qty;
+  } else {
+    s.qtyInStock += qty;
+  }
+  if (!s.movements) s.movements = [];
+  s.movements.unshift({ type, qty, reason, date: new Date().toISOString().split('T')[0], ref: '' });
+
+  spares[editIndex] = s;
+  saveSpares(spares);
+  document.getElementById('f-qty').value = s.qtyInStock;
+  updateStockIndicator();
+  document.getElementById('adj-qty').value    = '1';
+  document.getElementById('adj-reason').value = '';
+  renderStats();
+  renderTable();
+}
+
+// ── DELETE ───────────────────────────────────────────────────────
+function deletePart(idx) {
+  if (!confirm('Delete "' + spares[idx].spareName + '"?')) return;
+  spares.splice(idx, 1);
+  saveSpares(spares);
+  renderStats();
+  renderTable();
+}
+
+// ── DETAIL VIEW ──────────────────────────────────────────────────
+function viewDetail(idx) {
+  detailIdx = idx;
+  const s   = spares[idx];
+  const st  = stockStatus(s);
+  const bdgC= st==='out'?'badge-out':st==='low'?'badge-low':'badge-ok';
+  const bdgT= st==='out'?'OUT OF STOCK':st==='low'?'LOW STOCK':'OK';
+  document.getElementById('d-title').textContent = '📦 ' + s.spareName;
+
+  const mvtHTML = (s.movements && s.movements.length) ? `
+    <table class="mvt-table"><thead><tr><th>Date</th><th>Type</th><th>Qty</th><th>Reason / Ref</th></tr></thead><tbody>
+    ${s.movements.map(m=>`<tr>
+      <td>${m.date||'—'}</td>
+      <td style="color:${m.type==='add'?'#4ade80':'#f87171'};font-weight:600">${m.type==='add'?'➕ Added':'➖ Deducted'}</td>
+      <td style="font-weight:600">${m.qty}</td>
+      <td>${m.reason||'—'}${m.ref?' · '+m.ref:''}</td>
+    </tr>`).join('')}
+    </tbody></table>` : '<span style="color:#475569;font-size:13px">No stock movements recorded yet.</span>';
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-section">
+      <h3>🔩 Part Info</h3>
+      <div class="detail-row"><span class="dk">Part ID</span><span class="dv">${s.id}</span></div>
+      <div class="detail-row"><span class="dk">Spare Name</span><span class="dv"><strong>${s.spareName}</strong></span></div>
+      <div class="detail-row"><span class="dk">Specification</span><span class="dv">${s.specification||'—'}</span></div>
+      <div class="detail-row"><span class="dk">Condition</span><span class="dv">${s.newUsedRepaired||'—'}</span></div>
+      <div class="detail-row"><span class="dk">Unit Price</span><span class="dv">${s.unitPrice?'₹'+Number(s.unitPrice).toLocaleString('en-IN'):'—'}</span></div>
+    </div>
+    <div class="detail-section">
+      <h3>🏭 Location</h3>
+      <div class="detail-row"><span class="dk">Machine</span><span class="dv">${s.machine||'—'}</span></div>
+      <div class="detail-row"><span class="dk">Storage Location</span><span class="dv">${s.storageLocation||'—'}</span></div>
+      <div class="detail-row"><span class="dk">Compartment</span><span class="dv">${s.compartment||'—'}</span></div>
+      <div class="detail-row"><span class="dk">Supplier</span><span class="dv">${s.supplier||'—'}</span></div>
+      <div class="detail-row"><span class="dk">Lead Time</span><span class="dv">${s.leadTime||'—'}</span></div>
+    </div>
+    <div class="detail-section">
+      <h3>📊 Stock</h3>
+      <div class="detail-row"><span class="dk">Qty in Stock</span><span class="dv" style="font-size:18px;font-weight:700;color:${st==='out'?'#f87171':st==='low'?'#fbbf24':'#4ade80'}">${s.qtyInStock}</span></div>
+      <div class="detail-row"><span class="dk">Min. Stock Req.</span><span class="dv">${s.minStockReq}</span></div>
+      <div class="detail-row"><span class="dk">Status</span><span class="dv"><span class="badge ${bdgC}">${bdgT}</span></span></div>
+    </div>
+    <div class="detail-section">
+      <h3>📋 Stock Movement History</h3>
+      ${mvtHTML}
+    </div>`;
+
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function closeDetail() { document.getElementById('detailModal').classList.remove('show'); }
+function editFromDetail() { closeDetail(); openEditModal(detailIdx); }
+</script>
+<script>
+// ── EXCEL IMPORT ─────────────────────────────────────────────────
+function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb   = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+      // Row 0 = title row, Row 1 = column headers, Row 2+ = data
+      const dataRows = rows.slice(2).filter(r => r[3]); // Col D (spareName) must have a value
+      if (!dataRows.length) { alert('No data rows found. Expected data from row 3 onward with Spare Name in Column D.'); return; }
+
+      if (!confirm('Import ' + dataRows.length + ' spare parts? This will ADD to existing records (duplicates not checked).')) return;
+
+      const imported = dataRows.map(r => ({
+        id:              'SP-' + String(Date.now() + Math.random()*999|0).slice(-6),
+        machine:         String(r[0]||'').trim(),
+        storageLocation: String(r[1]||'').trim(),
+        compartment:     String(r[2]||'').trim(),
+        spareName:       String(r[3]||'').trim(),
+        specification:   String(r[4]||'').trim(),
+        newUsedRepaired: String(r[5]||'New').trim(),
+        unitPrice:       r[6]||'',
+        qtyInStock:      parseInt(r[7]) || 0,
+        minStockReq:     parseInt(r[8]) || 1,
+        leadTime:        String(r[9]||'').trim(),
+        supplier:        String(r[10]||'').trim(),
+        discontinued:    String(r[11]||'').toLowerCase().includes('yes'),
+        notes:           String(r[12]||'').trim(),
+        movements:       [],
+        createdAt:       new Date().toISOString(),
+      }));
+
+      spares = [...spares, ...imported];
+      saveSpares(spares);
+      renderStats();
+      renderTable();
+      alert('✅ Imported ' + imported.length + ' spare parts successfully!');
+    } catch(err) { alert('Import failed: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+// ── CLOSE ON OVERLAY CLICK ───────────────────────────────────────
+document.getElementById('spModal').addEventListener('click',    function(e){ if(e.target===this) closeModal();  });
+document.getElementById('detailModal').addEventListener('click', function(e){ if(e.target===this) closeDetail(); });
+
+// ── CLOCK ────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('live-clock').textContent =
+    new Date().toLocaleString('en-GB',{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// ── INIT ─────────────────────────────────────────────────────────
+populateMachineDropdowns();
+renderStats();
+renderTable();
+</script>
+</body>
+</html>

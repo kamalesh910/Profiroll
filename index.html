@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Maintenance Management System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── TOP NAV BAR ── */
+    .navbar {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .navbar .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .navbar .logo span.icon {
+      font-size: 24px;
+    }
+
+    .navbar .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 14px;
+      color: #94a3b8;
+    }
+
+    .navbar .nav-right .date-time {
+      background: #0f172a;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    /* ── SIDEBAR ── */
+    .layout {
+      display: flex;
+      height: calc(100vh - 60px);
+    }
+
+    .sidebar {
+      width: 240px;
+      background: #1e293b;
+      border-right: 1px solid #334155;
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sidebar .section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #475569;
+      letter-spacing: 1px;
+      padding: 8px 20px 4px;
+      margin-top: 8px;
+    }
+
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 14px;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-left-color: #38bdf8;
+    }
+
+    .sidebar a.active {
+      background: #0f172a;
+      color: #38bdf8;
+      border-left-color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .sidebar a .nav-icon {
+      font-size: 18px;
+      width: 22px;
+      text-align: center;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px;
+    }
+
+    /* ── HERO SECTION ── */
+    .hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 60%);
+      border: 1px solid #1e40af44;
+      border-radius: 16px;
+      padding: 48px 40px;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '⚙';
+      position: absolute;
+      right: 40px;
+      top: 20px;
+      font-size: 120px;
+      opacity: 0.05;
+      animation: spin 20s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .hero h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .hero h1 span {
+      color: #38bdf8;
+    }
+
+    .hero p {
+      font-size: 15px;
+      color: #94a3b8;
+      margin-bottom: 28px;
+      max-width: 480px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #0369a1;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+    }
+
+    .btn-outline:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    /* ── STATS CARDS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: #38bdf8;
+    }
+
+    .stat-card .stat-label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .stat-card .stat-sub {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .stat-card .stat-icon {
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    .stat-card.blue  { border-top: 3px solid #38bdf8; }
+    .stat-card.red   { border-top: 3px solid #f87171; }
+    .stat-card.green { border-top: 3px solid #4ade80; }
+    .stat-card.amber { border-top: 3px solid #fbbf24; }
+
+    /* ── MODULE CARDS ── */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .module-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 24px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .module-card:hover {
+      background: #0f172a;
+      border-color: #38bdf8;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(56,189,248,0.1);
+    }
+
+    .module-card .mod-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .module-card .mod-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+
+    .module-card .mod-desc {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    /* ── RECENT ACTIVITY ── */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .panel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .panel h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #0f172a;
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+
+    .dot-red    { background: #f87171; }
+    .dot-green  { background: #4ade80; }
+    .dot-amber  { background: #fbbf24; }
+    .dot-blue   { background: #38bdf8; }
+
+    .activity-text {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    .activity-text strong {
+      color: #e2e8f0;
+    }
+
+    .activity-time {
+      font-size: 11px;
+      color: #475569;
+      margin-top: 2px;
+    }
+
+    .alert-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #0f172a;
+    }
+
+    .alert-item:last-child { border-bottom: none; }
+
+    .alert-badge {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .badge-red   { background: #7f1d1d; color: #fca5a5; }
+    .badge-amber { background: #78350f; color: #fcd34d; }
+    .badge-blue  { background: #1e3a5f; color: #7dd3fc; }
+
+    .alert-text {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: #334155;
+      border-top: 1px solid #1e293b;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .bottom-grid { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .hero h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV BAR -->
+  <nav class="navbar">
+    <div class="logo">
+      <span class="icon">⚙️</span>
+      <span>Maintenance Management System</span>
+    </div>
+    <div class="nav-right">
+      <span id="live-clock" class="date-time">Loading...</span>
+      <span>👤 Engineer</span>
+    </div>
+  </nav>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <span class="section-label">Main</span>
+      <a href="#" class="active"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="machines.html"><span class="nav-icon">🏭</span> Machines</a>
+
+      <span class="section-label">Operations</span>
+      <a href="breakdowns.html"><span class="nav-icon">🔴</span> Breakdowns</a>
+
+      <span class="section-label">Inventory</span>
+      <a href="spareparts.html"><span class="nav-icon">📦</span> Spare Parts</a>
+
+      <span class="section-label">Analytics</span>
+      <a href="kpi.html"><span class="nav-icon">📊</span> KPI (MTTR/MTBF)</a>
+      <a href="reports.html"><span class="nav-icon">📄</span> Monthly Reports</a>
+      <span class="section-label">Files</span>
+      <a href="documents.html"><span class="nav-icon">📁</span> Documents</a>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+      <!-- HERO -->
+      <div class="hero">
+        <h1>Welcome to <span>Maintenance</span><br>Management System</h1>
+        <p>Track machine breakdowns, manage spare parts, and monitor performance KPIs — all in one place.</p>
+        <div class="hero-buttons">
+          <a href="breakdowns.html" class="btn btn-primary">🔴 Log Breakdown</a>
+          <a href="reports.html" class="btn btn-outline">� Monthly Report</a>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="stats-grid" id="dash-stats">
+        <div class="stat-card blue">
+          <span class="stat-icon">🏭</span>
+          <div class="stat-label">Total Machines</div>
+          <div class="stat-value" id="stat-machines">—</div>
+          <div class="stat-sub" id="stat-machines-sub">Loading…</div>
+        </div>
+        <div class="stat-card red">
+          <span class="stat-icon">🔴</span>
+          <div class="stat-label">Breakdowns This Month</div>
+          <div class="stat-value" id="stat-bd-month">—</div>
+          <div class="stat-sub" id="stat-bd-month-sub">Loading…</div>
+        </div>
+        <div class="stat-card amber">
+          <span class="stat-icon">🔧</span>
+          <div class="stat-label">Open Breakdowns</div>
+          <div class="stat-value" id="stat-bd-open">—</div>
+          <div class="stat-sub" id="stat-bd-open-sub">Loading…</div>
+        </div>
+        <div class="stat-card green">
+          <span class="stat-icon">✅</span>
+          <div class="stat-label">Closed This Month</div>
+          <div class="stat-value" id="stat-bd-closed">—</div>
+          <div class="stat-sub" id="stat-bd-closed-sub">Loading…</div>
+        </div>
+      </div>
+
+      <!-- QUICK ACCESS MODULES -->
+      <div class="section-title">⚡ Quick Access</div>
+      <div class="modules-grid">
+        <a href="machines.html" class="module-card">
+          <span class="mod-icon">🏭</span>
+          <div class="mod-title">Machines</div>
+          <div class="mod-desc">View & manage equipment</div>
+        </a>
+        <a href="breakdowns.html" class="module-card">
+          <span class="mod-icon">🔴</span>
+          <div class="mod-title">Breakdowns</div>
+          <div class="mod-desc">Log & track failures</div>
+        </a>
+        <a href="spareparts.html" class="module-card">
+          <span class="mod-icon">📦</span>
+          <div class="mod-title">Spare Parts</div>
+          <div class="mod-desc">Stock & inventory</div>
+        </a>
+        <a href="kpi.html" class="module-card">
+          <span class="mod-icon">📊</span>
+          <div class="mod-title">KPI Dashboard</div>
+          <div class="mod-desc">MTTR & MTBF analysis</div>
+        </a>
+        <a href="reports.html" class="module-card">
+          <span class="mod-icon">📄</span>
+          <div class="mod-title">Monthly Report</div>
+          <div class="mod-desc">Generate & export</div>
+        </a>
+        <a href="documents.html" class="module-card">
+          <span class="mod-icon">📁</span>
+          <div class="mod-title">Documents</div>
+          <div class="mod-desc">JH Sheet, Machine Record, PM</div>
+        </a>
+      </div>
+
+      <!-- RECENT BREAKDOWNS PANEL -->
+      <div class="panel" style="margin-bottom:24px">
+        <h3>🕐 Recent Breakdowns</h3>
+        <div id="recent-bd-list">
+          <div style="color:#475569;font-size:13px;padding:16px 0">Loading…</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        © 2026 Maintenance Management System — Built for Engineering Teams
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // ── LIVE CLOCK ────────────────────────────────────────────────
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-clock').textContent =
+        now.toLocaleString('en-GB', {
+          weekday:'short', year:'numeric', month:'short',
+          day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'
+        });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ── LIVE STATS FROM LOCALSTORAGE ──────────────────────────────
+    function loadDashStats() {
+      const machines   = JSON.parse(localStorage.getItem('mms_machines')  || '[]');
+      const breakdowns = JSON.parse(localStorage.getItem('mms_breakdowns') || '[]');
+
+      const now       = new Date();
+      const thisYear  = now.getFullYear();
+      const thisMonth = now.getMonth(); // 0-indexed
+
+      // This month's breakdowns
+      const bdThisMonth = breakdowns.filter(b => {
+        if (!b.bdDate) return false;
+        const d = new Date(b.bdDate);
+        return d.getFullYear() === thisYear && d.getMonth() === thisMonth;
+      });
+
+      // Last month's breakdowns (for comparison)
+      const lastMonth     = thisMonth === 0 ? 11 : thisMonth - 1;
+      const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+      const bdLastMonth   = breakdowns.filter(b => {
+        if (!b.bdDate) return false;
+        const d = new Date(b.bdDate);
+        return d.getFullYear() === lastMonthYear && d.getMonth() === lastMonth;
+      });
+
+      const openBD   = breakdowns.filter(b => b.status === 'Open').length;
+      const inProgBD = breakdowns.filter(b => b.status === 'In Progress').length;
+      const closedThisMonth = bdThisMonth.filter(b => b.status === 'Closed').length;
+
+      // Total Machines
+      document.getElementById('stat-machines').textContent = machines.length;
+      document.getElementById('stat-machines-sub').textContent =
+        machines.length === 0 ? 'No machines added yet' : `${machines.length} registered machine${machines.length > 1 ? 's' : ''}`;
+
+      // Breakdowns this month
+      document.getElementById('stat-bd-month').textContent = bdThisMonth.length;
+      const diff = bdThisMonth.length - bdLastMonth.length;
+      const diffText = diff === 0 ? 'Same as last month'
+        : diff > 0 ? `↑ ${diff} more than last month`
+        : `↓ ${Math.abs(diff)} less than last month`;
+      document.getElementById('stat-bd-month-sub').textContent = diffText;
+
+      // Open breakdowns
+      document.getElementById('stat-bd-open').textContent = openBD + inProgBD;
+      document.getElementById('stat-bd-open-sub').textContent =
+        `${openBD} open · ${inProgBD} in progress`;
+
+      // Closed this month
+      document.getElementById('stat-bd-closed').textContent = closedThisMonth;
+      document.getElementById('stat-bd-closed-sub').textContent =
+        `Repaired in ${now.toLocaleString('en-GB', { month: 'long' })}`;
+
+      // ── RECENT BREAKDOWNS ──────────────────────────────────────
+      const recent = [...breakdowns]
+        .sort((a, b) => new Date(b.createdAt || b.bdDate) - new Date(a.createdAt || a.bdDate))
+        .slice(0, 8);
+
+      const container = document.getElementById('recent-bd-list');
+      if (recent.length === 0) {
+        container.innerHTML = `<div style="color:#475569;font-size:13px;padding:12px 0;text-align:center">
+          No breakdowns recorded yet. <a href="breakdowns.html" style="color:#38bdf8">Log one now →</a>
+        </div>`;
+        return;
+      }
+
+      const statusColors = { 'Open': '#f87171', 'In Progress': '#fbbf24', 'Closed': '#4ade80' };
+      container.innerHTML = recent.map(b => {
+        const color = statusColors[b.status] || '#94a3b8';
+        return `
+          <div class="activity-item">
+            <div class="activity-dot" style="background:${color};margin-top:5px;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="activity-text">
+                <strong>${b.machine}</strong> — ${b.problem ? b.problem.substring(0,70) + (b.problem.length > 70 ? '…' : '') : '—'}
+                <span style="margin-left:8px;background:${color}22;color:${color};
+                  font-size:10px;padding:1px 7px;border-radius:10px;font-weight:600">${b.status}</span>
+              </div>
+              <div class="activity-time">${b.bdDate}${b.startTime ? ' · ' + b.startTime : ''} · ${b.technician || '—'}</div>
+            </div>
+            <a href="breakdowns.html" style="font-size:12px;color:#38bdf8;text-decoration:none;padding:4px 8px;
+               background:#1e3a5f;border-radius:6px;white-space:nowrap">View →</a>
+          </div>`;
+      }).join('');
+    }
+
+    loadDashStats();
+  </script>
+
+</body>
+</html>
