@@ -125,6 +125,15 @@ function _mergeWithDefaults(raw) {
     problems.push(`"lockTimeoutSeconds" key absent; using default ${DEFAULT_CONFIG.lockTimeoutSeconds}`);
   }
 
+  // Pass through any additional keys (arrays / optional config) without type-guarding
+  if (isObj) {
+    const extraKeys = ['machineTypes','machineLocations','machineStatuses','partConditions',
+                       'breakdownStatuses','sparePartCategories','operatingHoursOptions'];
+    for (const key of extraKeys) {
+      if (key in raw) config[key] = raw[key];
+    }
+  }
+
   return { config, problems };
 }
 

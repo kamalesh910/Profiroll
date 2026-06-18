@@ -327,11 +327,11 @@
         </div>
         <div class="form-group">
           <label>Type</label>
-          <input type="text" id="f-type" placeholder="e.g. Conveyor, Pump…" />
+          <select id="f-type"><option value="">— Select Type —</option></select>
         </div>
         <div class="form-group">
           <label>Location</label>
-          <input type="text" id="f-location" placeholder="e.g. Line 1, Bay A" />
+          <select id="f-location"><option value="">— Select Location —</option></select>
         </div>
         <div class="form-group">
           <label>Status</label>
@@ -393,6 +393,16 @@
       const config = await ConfigLoader.load();
       document.title = config.appTitle;
       document.querySelector('.navbar .logo').textContent = config.appTitle;
+
+      // Populate config-driven dropdowns
+      if (config.machineTypes) {
+        const typeOpts = config.machineTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+        document.getElementById('f-type').innerHTML = '<option value="">— Select Type —</option>' + typeOpts;
+      }
+      if (config.machineLocations) {
+        const locOpts = config.machineLocations.map(l => `<option value="${l}">${l}</option>`).join('');
+        document.getElementById('f-location').innerHTML = '<option value="">— Select Location —</option>' + locOpts;
+      }
       
       // Load machines from CsvStore
       machines = await CsvStore.load('machines');

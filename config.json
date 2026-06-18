@@ -1,6 +1,52 @@
 {
   "dataPath": "data",
-  "appTitle": "Maintenance Management System",
+  "appTitle": "Profiroll MMS",
   "defaultOperatingHours": 720,
-  "lockTimeoutSeconds": 10
+  "lockTimeoutSeconds": 10,
+  "machineTypes": [
+    "Rolling Mill",
+    "Slitting Machine",
+    "Straightening Machine",
+    "Coil Car",
+    "Recoiler",
+    "Shear",
+    "Pinch Roll",
+    "Tension Leveler",
+    "Belt Conveyor",
+    "Hydraulic Press",
+    "Air Compressor",
+    "Overhead Crane",
+    "Cooling Tower",
+    "Pump",
+    "Motor Drive",
+    "Other"
+  ],
+  "machineLocations": [
+    "Production Line 1",
+    "Production Line 2",
+    "Production Line 3",
+    "Utility Area",
+    "Maintenance Bay",
+    "Warehouse",
+    "Other"
+  ],
+  "machineStatuses": ["Running", "Down", "Maintenance", "Standby"],
+  "partConditions": ["New", "Used", "Repaired", "Refurbished"],
+  "breakdownStatuses": ["Open", "In Progress", "Closed"],
+  "sparePartCategories": [
+    "Bearings",
+    "Belts & Chains",
+    "Electrical",
+    "Hydraulic",
+    "Pneumatic",
+    "Seals & Gaskets",
+    "Mechanical",
+    "Filters",
+    "Lubricants",
+    "Sensors",
+    "Motors",
+    "Gearbox",
+    "Other"
+  ],
+  "operatingHoursOptions": [480, 600, 672, 720, 744]
 }

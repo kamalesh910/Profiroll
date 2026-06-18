@@ -241,18 +241,18 @@ Test framework: **Vitest** with **fast-check** for property-based tests.
     - Generate records created in various past months; call `update` and `remove`; assert that only
       the file at `{dataPath}/{creationMonth}/{entity}.csv` is written, not the current-month file.
 
-- [-] 12. Checkpoint — all CsvStore CRUD tests pass
+- [x] 12. Checkpoint — all CsvStore CRUD tests pass
   - Run `vitest --run tests/csv-store.test.js`; all property and unit tests must pass.
 
-- [ ] 13. Implement migration dialog in `csv-store.js`
-  - [ ] 13.1 Implement migration detection and `_showMigrationDialog()`
+- [x] 13. Implement migration dialog in `csv-store.js`
+  - [x] 13.1 Implement migration detection and `_showMigrationDialog()`
     - On `CsvStore.init()`, after mode selection: check for `mms_machines`, `mms_breakdowns`,
       `mms_spares` keys in `localStorage` AND absence of CSV files under `dataPath`.
     - If both conditions are true, inject a fixed-position migration dialog with "Migrate now" and
       "Skip" buttons; block main content until the user chooses.
     - _Requirements: 8.1, 10.4_
 
-  - [~] 13.2 Implement migration execution
+  - [x] 13.2 Implement migration execution
     - On "Migrate now": parse each localStorage JSON array; route each record to its
       `createdAt`-derived month (or current month as fallback); write CSV files via `_flush`.
     - On successful migration of each entity: delete that `localStorage` key.
@@ -268,34 +268,34 @@ Test framework: **Vitest** with **fast-check** for property-based tests.
       record count equals the original count and each record's field values are byte-for-byte
       identical.
 
-- [ ] 14. Wire `csv-store.js` into page scripts — replace localStorage calls
-  - [~] 14.1 Wire `machines.html` page script
+- [x] 14. Wire `csv-store.js` into page scripts — replace localStorage calls
+  - [x] 14.1 Wire `machines.html` page script
     - Import `CsvStore`; call `CsvStore.init()` at page load.
     - Replace `localStorage.getItem('mms_machines')` with `await CsvStore.load('machines')`.
     - Replace `localStorage.setItem('mms_machines', ...)` with `await CsvStore.save('machines', ...)`.
     - Replace direct array push/filter with `CsvStore.append`, `CsvStore.update`, `CsvStore.remove`.
     - _Requirements: 3.1, 3.2, 3.3, 10.1, 10.2, 10.3_
 
-  - [~] 14.2 Wire `breakdowns.html` page script
+  - [x] 14.2 Wire `breakdowns.html` page script
     - Same substitution pattern as 14.1 for the `'breakdowns'` entity.
     - _Requirements: 3.1, 3.2, 3.3, 10.1, 10.2, 10.3_
 
-  - [~] 14.3 Wire `spareparts.html` page script
+  - [x] 14.3 Wire `spareparts.html` page script
     - Same substitution pattern as 14.1 for the `'spareparts'` entity.
     - _Requirements: 3.1, 3.2, 3.3, 10.1, 10.2, 10.3_
 
-  - [~] 14.4 Wire `kpi.html` and `reports.html` page scripts
+  - [x] 14.4 Wire `kpi.html` and `reports.html` page scripts
     - Import `ConfigLoader`; read `defaultOperatingHours`; pre-populate the "Operating Hrs/Month"
       selector with the configured value.
     - Replace any `localStorage` reads for machines/breakdowns/spareparts with `CsvStore.load`.
     - _Requirements: 1.5, 3.4, 10.1_
 
-  - [~] 14.5 Update `<title>` and navbar `appTitle` on all pages
+  - [x] 14.5 Update `<title>` and navbar `appTitle` on all pages
     - In each page's init script, call `ConfigLoader.load()` and set `document.title` and the
       navbar brand span to `config.appTitle`.
     - _Requirements: 1.4_
 
-- [~] 15. Implement toast and UI notification components in `csv-store.js`
+- [x] 15. Implement toast and UI notification components in `csv-store.js`
   - Inject a single `<div id="mms-toast">` at fixed bottom-right using `csv-store.js`; implement
     `_showToast(msg, type)` with `error` (permanent), `warning` (≥ 5 s), and `info` (4 s auto-
     dismiss) severity styles.
@@ -324,7 +324,7 @@ Test framework: **Vitest** with **fast-check** for property-based tests.
       cleared for successful entities, and record counts match.
     - _Requirements: 8.1, 8.2, 8.3_
 
-- [~] 17. Final checkpoint — all tests pass, no regressions
+- [x] 17. Final checkpoint — all tests pass, no regressions
   - Run `vitest --run` (entire test suite); all tests must pass.
   - Verify no existing HTML, CSS class, or DOM element has been added, removed, or modified on
     any of the seven pages.

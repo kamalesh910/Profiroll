@@ -239,38 +239,25 @@
   import { CsvStore } from './csv-store.js';
   import { ConfigLoader } from './config-loader.js';
 
-  // ── INIT ON PAGE LOAD ────────────────────────────────────────
-  (async function initPage() {
-    await CsvStore.init();
-    const config = await ConfigLoader.load();
-    document.title = config.appTitle;
-    
-    spares = await CsvStore.load('spareparts');
-    machines = await CsvStore.load('machines');
-    
-    populateMachineDropdowns();
-    renderStats();
-    renderTable();
-  })();
-
+  // ── STATE (all in module scope so every function can access) ─────
   let spares    = [];
   let machines  = [];
   let editIndex = null;
   let detailIdx = null;
 
   function stockStatus(sp) {
-    if (sp.qtyInStock <= 0)                         return 'out';
-    if (sp.qtyInStock <= sp.minStockReq)            return 'low';
+    if (sp.qtyInStock <= 0)              return 'out';
+    if (sp.qtyInStock <= sp.minStockReq) return 'low';
     return 'ok';
   }
 
   // ── MACHINE DROPDOWN ─────────────────────────────────────────────
   function populateMachineDropdowns() {
     const opts = machines.map(m => `<option value="${m.id}">${m.id} — ${m.name}</option>`).join('');
-    document.getElementById('f-machine').innerHTML    = '<option value="">— Select —</option>' + opts;
-    document.getElementById('machineFilter').innerHTML= '<option value="">All Machines</option>' +
-    machines.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
-}
+    document.getElementById('f-machine').innerHTML     = '<option value="">— Select —</option>' + opts;
+    document.getElementById('machineFilter').innerHTML = '<option value="">All Machines</option>' +
+      machines.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
+  }
 
 // ── STOCK INDICATOR ───────────────────────────────────────────────
 function updateStockIndicator() {
@@ -348,21 +335,8 @@ function renderTable() {
   }).join('');
 }
 
-// Expose module-scoped helpers and the CsvStore API to global scope so
-// existing inline `onclick` handlers (which run in the page/global scope)
-// can call them when the page is served over HTTP.
-window.CsvStore = CsvStore;
-window.ConfigLoader = ConfigLoader;
-window.populateMachineDropdowns = populateMachineDropdowns;
-window.renderStats = renderStats;
-window.renderTable = renderTable;
-window.updateStockIndicator = updateStockIndicator;
-window.stockStatus = stockStatus;
-window.viewDetail = viewDetail;
-</script>
-<script>
-// ── OPEN / CLOSE MODALS ──────────────────────────────────────────
-function openAddModal() {
+  // ── OPEN / CLOSE MODALS ──────────────────────────────────────────
+  function openAddModal() {
   editIndex = null;
   document.getElementById('modal-title').textContent = '📦 Add Spare Part';
   document.getElementById('adjust-section').style.display = 'none';
@@ -548,12 +522,11 @@ function viewDetail(idx) {
   document.getElementById('detailModal').classList.add('show');
 }
 
-function closeDetail() { document.getElementById('detailModal').classList.remove('show'); }
-function editFromDetail() { closeDetail(); openEditModal(detailIdx); }
-</script>
-<script>
-// ── EXCEL IMPORT ─────────────────────────────────────────────────
-function importExcel(event) {
+  function closeDetail() { document.getElementById('detailModal').classList.remove('show'); }
+  function editFromDetail() { closeDetail(); openEditModal(detailIdx); }
+
+  // ── EXCEL IMPORT ─────────────────────────────────────────────────
+  function importExcel(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -587,49 +560,93 @@ function importExcel(event) {
         createdAt:       new Date().toISOString(),
       }));
 
-      spares = [...spares, ...imported];
-      saveSpares(spares);
-      renderStats();
-      renderTable();
-      alert('✅ Imported ' + imported.length + ' spare parts successfully!');
+      (async () => {
+        try {
+          for (const part of imported) {
+            await CsvStore.append('spareparts', part);
+          }
+          spares = await CsvStore.load('spareparts');
+          renderStats();
+          renderTable();
+          alert('✅ Imported ' + imported.length + ' spare parts successfully!');
+        } catch(err2) { alert('Import save failed: ' + err2.message); }
+      })();
     } catch(err) { alert('Import failed: ' + err.message); }
   };
   reader.readAsArrayBuffer(file);
   event.target.value = '';
 }
 
-// ── CLOSE ON OVERLAY CLICK ───────────────────────────────────────
-document.getElementById('spModal').addEventListener('click',    function(e){ if(e.target===this) closeModal();  });
-document.getElementById('detailModal').addEventListener('click', function(e){ if(e.target===this) closeDetail(); });
+  // ── CLOSE ON OVERLAY CLICK ───────────────────────────────────────
+  document.getElementById('spModal').addEventListener('click',     e => { if(e.target===document.getElementById('spModal'))     closeModal();  });
+  document.getElementById('detailModal').addEventListener('click', e => { if(e.target===document.getElementById('detailModal')) closeDetail(); });
 
-// ── CLOCK ────────────────────────────────────────────────────────
-function updateClock() {
-  document.getElementById('live-clock').textContent =
-    new Date().toLocaleString('en-GB',{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
-updateClock(); setInterval(updateClock, 1000);
+  // ── CLOCK ────────────────────────────────────────────────────────
+  function updateClock() {
+    document.getElementById('live-clock').textContent =
+      new Date().toLocaleString('en-GB',{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
 
-// ── INIT ─────────────────────────────────────────────────────────
-populateMachineDropdowns();
-renderStats();
-renderTable();
+  // ── INIT ON PAGE LOAD ────────────────────────────────────────────
+  (async function initPage() {
+    await CsvStore.init();
+    const config = await ConfigLoader.load();
+    document.title = config.appTitle;
+    spares   = await CsvStore.load('spareparts');
+    machines = await CsvStore.load('machines');
+    populateMachineDropdowns();
+    renderStats();
+    renderTable();
+  })();
 
-// Expose all plain-script functions to window for inline onclick handlers
-if (typeof window !== 'undefined') {
-  window.openAddModal = openAddModal;
-  window.openEditModal = openEditModal;
-  window.closeModal = closeModal;
-  window.savePart = savePart;
-  window.adjustStock = adjustStock;
-  window.deletePart = deletePart;
-  window.viewDetail = viewDetail;
-  window.closeDetail = closeDetail;
-  window.editFromDetail = editFromDetail;
-  window.importExcel = importExcel;
-  window.renderTable = renderTable;
-  window.renderStats = renderStats;
+  // ── EXPOSE ALL HANDLERS TO GLOBAL SCOPE (needed for inline onclick) ──
+  window.openAddModal       = openAddModal;
+  window.openEditModal      = openEditModal;
+  window.closeModal         = closeModal;
+  window.savePart           = savePart;
+  window.adjustStock        = adjustStock;
+  window.deletePart         = deletePart;
+  window.viewDetail         = viewDetail;
+  window.closeDetail        = closeDetail;
+  window.editFromDetail     = editFromDetail;
+  window.importExcel        = importExcel;
+  window.renderTable        = renderTable;
+  window.renderStats        = renderStats;
   window.updateStockIndicator = updateStockIndicator;
-}
+</script>
+</body>
+</html>
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── INIT ON PAGE LOAD ────────────────────────────────────────────
+  (async function initPage() {
+    await CsvStore.init();
+    const config = await ConfigLoader.load();
+    document.title = config.appTitle;
+    spares   = await CsvStore.load('spareparts');
+    machines = await CsvStore.load('machines');
+    populateMachineDropdowns();
+    renderStats();
+    renderTable();
+  })();
+
+  // ── EXPOSE ALL HANDLERS TO GLOBAL SCOPE (needed for inline onclick) ──
+  window.openAddModal         = openAddModal;
+  window.openEditModal        = openEditModal;
+  window.closeModal           = closeModal;
+  window.savePart             = savePart;
+  window.adjustStock          = adjustStock;
+  window.deletePart           = deletePart;
+  window.viewDetail           = viewDetail;
+  window.closeDetail          = closeDetail;
+  window.editFromDetail       = editFromDetail;
+  window.importExcel          = importExcel;
+  window.renderTable          = renderTable;
+  window.renderStats          = renderStats;
+  window.updateStockIndicator = updateStockIndicator;
 </script>
 </body>
 </html>
