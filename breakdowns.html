@@ -1036,6 +1036,17 @@
 
   // ── OPEN MODAL ────────────────────────────────────────────────
   function openAddModal() {
+    // Guard: machines must exist before a breakdown can be logged
+    if (!machines || machines.length === 0) {
+      showBdToast(
+        '⚠️ <strong>No machines found.</strong><br>' +
+        'Please add at least one machine in the <a href="machines.html" ' +
+        'style="color:#38bdf8;text-decoration:underline">Machines</a> page before logging a breakdown.',
+        'warn'
+      );
+      return;
+    }
+
     editIndex = null;
     historyRows = [];
     selectedParts = [];
